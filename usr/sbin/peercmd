@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/jsock/jsock.in
+
+main() {
+	if [ "nok" == "$(jsock_peer_state)" ]; then
+		echo "peer is not alive"
+
+		return ${e_inval}
+	fi
+
+	${__ROOTFS__}/etc/jsock/jcmd_syn.sh "$@" &
+}
+
+main "$@"

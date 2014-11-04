@@ -1,0 +1,41 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/utils.in
+
+readonly file_monitord_interval=/tmp/.monitord_interval
+readonly file_lock_monitord=/tmp/.monitord.lock
+
+monitor() {
+	local path=$1
+
+	if [ -z "${path}" ]; then
+		path=${__ROOTFS__}/etc/monitord.d
+	fi
+
+	for ((;;)); do
+		local interval=$(getfilevalue ${file_monitord_interval} 3)
+		local list="$(ls ${path})"
+		local task
+
+		sleep ${interval}
+
+		for task in ${list}; do
+			local app="$(cat ${path}/${task})"
+
+			if [ -z "${app}" ]; then
+				app=${task}
+			fi
+
+			monitortask ${task} ${app}
+		done
+	done
+}
+
+main() {
+	local path=$1
+
+	monitor ${path}
+#	exec_with_flock ${file_lock_monitord} monitor_all ${path}
+}
+
+main "$@"

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+usage() {
+	echo "$0 usage:"
+	echo "  $0 sys/sata on/off"
+	echo "	  sys: sys led"
+	echo "	  sata: sata led"
+	echo "	  on: led on"
+	echo "	  off: led off"
+	echo
+}
+
+#
+#$1:on/off
+#
+main() {
+	local led=$1
+	local action=$2
+	local err=0
+
+	if [ "2" != "$#" ]; then
+		usage
+
+		return
+	fi
+
+	case "${led}" in
+	"sys")
+		;;
+	"sata")
+		;;
+	*)
+		echo "no support ${led} led"
+
+		return ${e_inval}
+		;;
+	esac
+
+	case "${action}" in
+	"on")
+		#
+		# 0 is on
+		#
+		gpio ${led}=0; err=$?
+		;;
+	"off")
+		#
+		# 1 is off
+		#
+		gpio ${led}=1; err=$?
+		;;
+	*)
+		echo "no support ${led} led ${action}"
+
+		err=${e_inval}
+		;;
+	esac
+
+	return ${err}
+}
+
+main "$@"

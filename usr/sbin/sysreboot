@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+
+#
+#[$1:after]
+#
+main() {
+	local after="$1"
+
+	if [ -z "${after}" ]; then
+		after=3
+	fi
+
+	echo "system will reboot after ${after}s..."
+	sleep ${after}
+
+	syskillall
+	umount_all
+
+	sleep 1
+	reboot
+}
+
+main "$@"

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>
+        e路网
+        </title>
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+        <meta content="yes" name="apple-mobile-web-app-capable" />
+        <meta content="black" name="apple-mobile-web-app-status-bar-style" />
+        <meta name="format-detection" content="telephone=no" />
+        <link href="/static/css/main.css" rel="stylesheet" type="text/css" />
+        <script src="/static/js/zepto.js "></script>
+
+        <style>
+        
+        </style>
+    </head>
+    <body>
+        <div class="zjhn-hd">
+            <div class="zjhn-logo-wrap"  style="float:left">
+                 <a href="index.html" class="zjhn-logo"></a>
+            </div>
+            <div style="float:right" id="netauth"><a href="javascript:auth()">畅游互联网</a></div>
+            <div style="clear:both"></div>
+            <div style="clear:both" id="notice_div">
+                <div class="close" onClick="closeTips();"></div>
+                <div class="ltext" id='authmsg'>
+                    已成功连接，您可以免流量访问本站的内容和服务。
+                </div>
+            </div>
+            <ul class="zjhn-nav">
+                <li class="active"><a href="index.html">精选</a></li>
+                <li><a href="app-choice.html">应用</a></li>
+                <li><a href="game-choice.html">游戏</a></li>
+                <li><a  href="movie.html">视频</a></li>
+            </ul>
+        </div>
+        <div class="content index" data-spm="2">
+            <div class="grid-c">
+                <div class="module">
+                    <div id="J_sliderT" class="slider">
+                        <div class="pics">
+                            <ul class="wrap">
+                                <li><a href="help.html"><img src="/static/image/shouyegongsi.jpg" /></a></li>
+                                <li><a href="http://g.68869999.cn/c?z=ran10&la=0&si=66&ci=64&cg=83&c=368&or=519&l=578&bg=578&b=656&u=http://www.xmcsf.com/kg">
+                                <img src="/static/image/zenggao.jpg" /></a></li>
+                                <li><a href="/resource/game/weipai/nuannuandehuanzhuangwuyu.apk">
+                                <img src="/static/image/nuannuan.jpg" ></a></li>
+								<li><a href="/resource/game/weipai/FlushGoldzjhn1.0.2_201407181800.apk">
+                                <img src="/resource/game/weipai/720290.jpg" ></a></li>
+								<li><a href="/resource/soft/other/sogoumap-phone-5.4.0.apk">
+                                <img src="/resource/soft/other/sogoumap.png" ></a></li>
+                                <li><a href="jdys.html">
+                                <img src="/static/image/baoxiaodiaosi.jpg" /></a></li>
+                            </ul>
+                        </div>
+                        <div class="control"></div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="zjhn-content-nav">
+                <div class="zjhn-nav-1"><a href="hot-game.html"><i class="icon icon-hotgame"></i><span>热门游戏</span></a></div>
+              	<div class="zjhn-nav-2"><a href="taobao.html"><i class="icon icon-taobao"></i><span>淘宝专区</span></a></div>
+                <div class="zjhn-nav-3"><a href="tese.html"><i class="icon icon-mandatory"></i><span>特色专区</span></a></div>
+            </div>
+            <div class="b-title">
+                <h2>精品推荐</h2>
+                <ul class="separated">
+                    <li class="dividing-wrap">
+                        <ul class="dividing dividing-line">
+                            <li class="recommend"></li>
+                            <li class="toplist"></li>
+                            <li class="category"></li>
+                            <li class="taobao"></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="app-list" data-template>
+                <ul class="item">
+                    <li class="logo"><img src="{{icon}}" /></li>
+                    <li class="title">{{name}}</li>
+                    <li class="star">    <span class="icon icon-star"><i style="width:{{rank}}%"></i></span>
+                    </li>
+                    <li class="download-size"><span>
+                        {{download_times}}次下载
+                    </span><span class="separate">|</span><span>{{size}}</span></li>
+                    <li class="discription">{{brief}}</li>
+                    <li class="link"><a href="{{download_link}}"></a></li>
+                    <li class="download"><a class="download-btn" href="{{download_link}}" >下载</a></li>
+                </ul>
+                
+            </div>
+        </div>
+        <footer   class="footer zjhn-footer" >
+            
+            
+            <p class="copyright">Copyright 2013 北京中交汇能信息科技有限公司</p>
+            <p class="taofontdown" style="display:none">预加载淘+字体</p>
+        </footer>
+        <script src="/static/js/tempo.min.js"></script>
+        <script>
+            function home_recommend(data){
+                var list=data.data;
+                Tempo.prepare( $(".app-list").get(0) ).render( list );
+                $(".app-list").show();
+            }
+            
+        </script>
+        <script src="/static/js/home_recommend.json"></script>
+        <script src="/static/js/iscroll.js"></script>
+        <script>
+            setTimeout(function(){var SIZEWH = 720 / 260,clientWidth = document.body.clientWidth;document.getElementById("J_sliderT").style.height = (clientWidth > 768?768:clientWidth) / SIZEWH + 'px';},0);
+            //滚动
+            var $dotActive;
+            var $slider = $(".index .slider");
+            $(function(){
+            function indexSlider() {
+            var clientWidth = document.body.clientWidth;
+            var SIZEWH = 720 / 260;
+            var $dots;
+            var $dotActive;
+            var indexSlider;
+            var timer;
+            var autoTimer;
+            var lis;
+            var isTouching = false;
+            var $slider;
+            var $imgs;
+            var $pics;
+            var pageLen;
+            function initDoms() {
+            lis = $(".pics li");
+            $slider = $(".index .slider");
+            $imgs = $(".pics img");
+            $pics = $(".pics");
+            pageLen = $imgs.length;
+            }
+            function adjustHeight() {
+            clientWidth = document.body.clientWidth;
+            $slider.css("height", (clientWidth > 768 ? 768 : clientWidth) / SIZEWH);
+            }
+            function initEventBind(){
+            $(window).on("resize", function() {
+            clearTimeout(timer);
+            clearTimeout(autoTimer);
+            timer = setTimeout(function() {
+            adjustHeight();
+            indexSlider.refresh();
+            initAutoScroll();
+            }, 10);
+            });
+            $pics.on('touchstart', function() {
+            isTouching = true;
+            clearTimeout(autoTimer);
+            })
+            $pics.on('touchend', function() {
+            isTouching = false;
+            initAutoScroll();
+            })
+            }
+            function initStyles() {
+            lis.css("width", 100 / lis.length + '%');
+            $pics.css('width', lis.length * 100 + '%');
+            adjustHeight();
+            }
+            function refreshDots(curPageIndex) {
+            $dotActive && $dotActive.removeClass("cur");
+            $dotActive = $dots.eq(curPageIndex);
+            
+            $dotActive.addClass("cur");
+            }
+            function initSlider() {
+            indexSlider = new IScroll("#J_sliderT", {
+            scrollX: true,
+            scrollY: false,
+            mouseWheel: false,
+            click: true,
+            snap: "li"
+            });
+            setTimeout(function() {
+            
+            $slider.css("opacity", 1);
+            }, 0);
+            indexSlider.on('scrollEnd', function() {
+            var curPageIndex = indexSlider.currentPage.pageX;
+            refreshDots(curPageIndex);
+            })
+            }
+            function initDots() {
+            var tmp = [];
+            tmp.push('<ul class="dots">');
+                for (i = 0; i < lis.length; i++) {
+                tmp.push('<li ' + (i == 0 ? 'class="cur"' : '') + '></li>');
+                }
+            tmp.push('</ul>');
+            $("#J_sliderT .control").append(tmp.join(""));
+            $dots = $("#J_sliderT .dots li");
+            $dotActive = $("#J_sliderT .dots .cur");
+            }
+            function initAutoScroll() {
+            clearTimeout(autoTimer);
+            autoTimer = setTimeout(function() {
+            clearTimeout(autoTimer);
+            var curPageX = indexSlider.currentPage.pageX;
+            if (!isTouching) {
+            if(curPageX == pageLen - 1){
+            indexSlider.goToPage(0,0);
+            }else{
+            indexSlider.next();
+            }
+            autoTimer = setTimeout(arguments.callee, 4000);
+            }
+            }, 4000);
+            }
+            function init() {
+            initDoms();
+            initStyles();
+            initSlider();
+            initDots();
+            initEventBind();
+            initAutoScroll();
+            }
+            init();
+            }
+            indexSlider();
+            });
+         </script>
+            <script src="/static/js/jquery-1.10.2.min.js "></script>
+            <script>
+               function auth() {
+				$.ajax({
+					method: 'post',
+					url: 'nochkCode.php', 
+					dataType: 'json',
+					success: function(data) {
+					  if(data['code'] != 'ok') {
+							$('#authmsg').text('系统繁忙，请重新认证进入!');
+						}
+						else {
+								window.location.href="logSec.html";
+						}
+						$('#notice_div').show();
+					}
+				});
+			}
+			function closeTips(){
+			    	$('#notice_div').hide();
+			}
+            </script>
+    </body>
+    
+</html>

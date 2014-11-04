@@ -1,0 +1,45 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/utils.in
+
+readonly file_reset_interval=/tmp/.reset_interval
+readonly file_reset_threshold=/tmp/.reset_threshold
+readonly file_lock_resetd=/tmp/.resetd.lock
+
+reset_check() {
+	local count=0
+
+	for ((;;)); do
+		local interval=$(getfilevalue ${file_reset_interval} 1)
+		local threshold=$(getfilevalue ${file_reset_threshold} 5)
+
+		#
+		# 0: reset is pushed
+		#
+		if [ "0" == "$(gpio reset)" ]; then
+			((count++))
+		else
+			count=0
+		fi
+
+		if ((count>threshold)); then
+			break
+		fi
+
+		sleep ${interval}
+	done
+
+	echo_logger "reset" \
+		"check reset ${count} times, will upgrade to factory"
+
+	#
+	# will reboot
+	#
+	${__ROOTFS__}/etc/upgrade/upgrade_factory.sh
+}
+
+main() {
+	exec_with_flock ${file_lock_resetd} reset_check
+}
+
+main "$@"

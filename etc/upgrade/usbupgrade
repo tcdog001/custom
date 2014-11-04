@@ -1,0 +1,15 @@
+#!/bin/bash
+
+main() {
+	local dir_base=/mnt/usb/upgrade
+	#
+	# prepare flag file
+	#
+	local file=${dir_base}/.usbupgrade_auto
+	touch ${file}; fsync ${file}
+
+	local dir_rootfs=${dir_base}/rootfs
+	__ROOTFS__=${dir_rootfs} ${dir_rootfs}/etc/upgrade/usbupgrade.sh
+}
+
+main

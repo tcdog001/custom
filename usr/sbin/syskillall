@@ -1,0 +1,34 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/utils.in
+
+main() {
+	local list="monitord monitors"
+	list="${list} ${list}"
+	killall ${list} > /dev/null 2>&1
+
+	list="$(ls /etc/monitord.d 2>/dev/null) \
+		rsync_task.sh \
+		handshake_ap.sh \
+		upgrade_ap.sh \
+		upgrade_factory.sh \
+		rsync \
+		syslogd \
+		sleep \
+		crond \
+		nginx \
+		php-fpm \
+		udhcpd \
+		wifidog \
+		telnetd \
+		ntpclient \
+		"
+
+	echo_logger "sysreboot" \
+		"killall ${list}"
+
+	list="${list} ${list}"
+	killall ${list} > /dev/null 2>&1
+}
+
+main "$@"

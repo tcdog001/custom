@@ -1,0 +1,11 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/utils.in
+
+main() {
+	local path=$1
+
+	stimer ${path}
+}
+
+main "$@"

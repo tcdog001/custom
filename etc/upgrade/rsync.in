@@ -1,0 +1,844 @@
+#!/bin/bash
+
+if [ -n "${__UPGRADE_RSYNC_IN__}" ]; then
+	return
+else
+	__UPGRADE_RSYNC_IN__="$0"
+fi
+
+. ${__ROOTFS__}/etc/jsock/jsock.in
+. ${__ROOTFS__}/etc/upgrade/dir.in
+
+#
+#$1:file
+#[$2:idx]
+#
+# get_rootfs_file file ==> ${file}
+# get_rootfs_file file x ==> /rootfsX${file}
+#
+get_rootfs_file() {
+	local file=$1
+	local idx=$2
+	local dir
+
+	if [ -n "${idx}" ]; then
+		dir="$(rootfs_dir ${idx})"
+	fi
+
+	echo ${dir}${file}
+}
+
+#
+#[$1:idx]
+#
+# rootfs_version_file ==> /etc/.version
+# rootfs_version_file x ==> /rootfsX/etc/.version
+#
+rootfs_version_file() {
+	local idx=$1
+	local file="$(get_rootfs_file /etc/.version ${idx})"
+
+	echo "${file}"
+}
+
+#
+#[$1:idx]
+#
+# buddy_version_file ==> /etc/.buddy_version
+# buddy_version_file x ==> /rootfsX/etc/.buddy_version
+#
+buddy_version_file() {
+	local idx=$1
+	local file="$(get_rootfs_file /etc/.buddy_version ${idx})"
+
+	echo "${file}"
+}
+
+#[$1:idx]
+#
+# upgrade_type_file ==> /etc/.upgrade_type
+# upgrade_type_file x ==> /rootfsX/etc/.upgrade_type
+#
+upgrade_type_file() {
+	local idx=$1
+	local file="$(get_rootfs_file /etc/.upgrade_type ${idx})"
+
+	echo "${file}"
+}
+
+#
+#[$1:idx]
+#
+# upgrade_verfy_file ==> /etc/.upgrade_verfy
+# upgrade_verfy_file x ==> /rootfsX/etc/.upgrade_verfy
+#
+upgrade_verfy_file() {
+	local idx=$1
+	local file="$(get_rootfs_file /etc/.upgrade_verfy ${idx})"
+
+	echo "${file}"
+}
+
+#
+#[$1:idx]
+#
+# get_rootfs_version ==> get current rootfs's version
+# get_rootfs_version x ==> get rootfsX's version
+#
+get_rootfs_version() {
+	local idx=$1
+	local file="$(rootfs_version_file ${idx})"
+
+	echo "$(get_file_value ${file})"
+}
+
+#
+#$1:version
+#[$2:idx]
+#
+# set_rootfs_version version ==> set current rootfs's version
+# get_rootfs_version version x ==> set rootfsX's version
+#
+set_rootfs_version() {
+	local version=$1
+	local idx=$2
+	local file=$(rootfs_version_file ${idx})
+
+	echo "${version}" > ${file}
+	fsync ${file}
+}
+
+#
+#[$1:idx]
+#
+# get_buddy_version ==> get current rootfs's buddy_version
+# get_buddy_version x ==> get rootfsX's buddy_version
+#
+get_buddy_version() {
+	local idx=$1
+	local file=$(buddy_version_file ${idx})
+
+	echo "$(get_file_value ${file})"
+}
+
+#
+#$1:version
+#[$2:idx]
+#
+# set_buddy_version version ==> set current rootfs's buddy_version
+# set_buddy_version version x ==> set rootfsX's buddy_version
+#
+set_buddy_version() {
+	local version=$1
+	local idx=$2
+	local file=$(buddy_version_file ${idx})
+
+	echo "${version}" > ${file}
+	fsync ${file}
+}
+
+#
+#[$1:idx]
+#
+# get_upgrade_type ==> get current rootfs's .upgrade_type
+# get_upgrade_type x ==> get rootfsX's .upgrade_type
+#
+get_upgrade_type() {
+	local idx=$1
+	local file=$(upgrade_type_file ${idx})
+
+	echo "$(get_file_value ${file})"
+}
+
+#
+#$1:type
+#[$2:idx]
+#
+# set_upgrade_type version ==> set current rootfs's .upgrade_type
+# set_upgrade_type version x ==> set rootfsX's .upgrade_type
+#
+set_upgrade_type() {
+	local type=$1
+	local idx=$2
+	local file=$(upgrade_type_file ${idx})
+
+	echo "${type}" > ${file}
+	fsync ${file}
+}
+
+readonly RSYNC_PORT=873
+readonly RSYNC_USER=root
+readonly RSYNC_PASS=autelan
+
+#
+# rsync dir/	-->dir_ap_rsync/a.b.c.d  or dir_md_rsync/a.b.c.d/
+readonly rsync_suffix_list="fsm state error log"
+#	fsm		-->ap/md rsync fsm, need|rsyncing|ok, init with ok
+#	state	-->ap/md upgrade state, need|upgrading|verfy|ok|fail, init with ok
+#	error	-->ap/md rsync error code, 0 is ok
+#	log		-->ap/md logs, append line
+
+#
+#
+readonly rsync_fsm_list="need rsyncing ok"
+#	fsm
+#		'need'
+#			after get rsync command from cloud
+#			before start rsync task
+#			set fsm to need
+#		'rsyncing'
+#			rsync task init, set fsm to rsyncing
+#		'ok'
+#			rsync task success, set fsm to ok
+#
+#
+#
+#	error:
+#		0: rsync task success, set error to 0
+#		other: rsync task normal exit with error, set error to rsync error code
+#
+#	rsync_log: line format [time version action error]
+#		time: like 2014.09.17-15:09:51
+#		action:
+#			cloud: get rsync command from cloud
+#			begin: begin rsync task
+#			normal: rsync task normal exit with error-code
+#			abnormal: rsync task abnormal
+#			check: fsm abnormal, kill rsync task
+readonly rsync_action_list="cloud begin normal abnormal check"
+#		error: error code
+#			when action is normal
+#				0: success
+#				other: rsync error code
+#			when action is check
+#				e_rsync_check_ready_running
+#					ok+running, kill rsync task
+#				e_rsync_check_need_running
+#					need+running, kill rsync task
+#				e_rsync_check_need_notrunning
+#					neeed+not running
+#				e_rsync_check_rsyncing_running
+#					rsyncing+running
+#
+
+rsync_debug_ok() {
+	debug_echo "__rsync__" "__all__" "__ok__" $@
+}
+
+rsync_debug_error() {
+	debug_echo "__rsync__" "__all__" "__error__" $@
+}
+
+rsync_debug_trace() {
+	debug_echo "__rsync__" "__all__" "__trace__" $@
+}
+
+rsync_logger() {
+	do_logger "rsync" "$@"
+}
+
+rsync_echo_logger() {
+	echo_logger "rsync" "$@"
+}
+
+rsync_rootfs0_check() {
+	if [ "0" == "$(rootfs_current)" ]; then
+		upgrade_debug_error "rootfs0 not support rsync"
+
+		return ${e_nosupport}
+	fi
+}
+
+#
+#$1:action
+#
+rsync_do() {
+	debug_do rsync "$*"
+}
+
+readonly file_rsync_timeout=/data/rsync/.rsync_timeout
+readonly rsync_timeout_seconds_deft=300
+get_rsync_timeout_seconds() {
+	echo "$(getfilevalue ${file_rsync_timeout} ${rsync_timeout_seconds_deft})"
+}
+
+readonly file_rsync_version_limit=/data/rsync/.rsync_version_limit
+readonly rsync_version_limit_deft=5
+get_rsync_version_limit() {
+	echo "$(getfilevalue ${file_rsync_version_limit} ${rsync_version_limit_deft})"
+}
+
+readonly file_lock_rsync_task=/tmp/.rsync_task.lock
+rsync_task_running() {
+	local err
+
+	exec_with_flock ${file_lock_rsync_task} echo; err=$?
+	if [ "${e_flock_failed}" == "${err}" ]; then
+		echo 'running'
+	fi
+}
+
+#
+#$1:obj
+#$2:version
+#$3:filename
+#
+rsync_file() {
+	local obj="$1"
+	local version="$2"
+	local file="$3"
+
+	echo $(rsync_version_dir ${obj} ${version})/${filename}
+}
+
+#
+#$1:obj
+#$2:version
+#
+rsync_logfile() {
+	local obj="$1"
+	local version="$2"
+
+	echo "$(rsync_file ${obj} ${version} 'log')"
+}
+
+#
+#$1:obj
+#$2:version
+#$3:action
+#$4:errno
+#...
+#
+rsync_log() {
+	local obj="$1"
+	local version="$2"
+	local action="$3"
+	local errno="$4"
+	shift 4
+	local file=$(rsync_logfile ${obj} ${version})
+
+	echo "$(getnow)" "${version}" "${action}" "${errno}" "$*" >> ${file}
+	fsync ${file}
+}
+
+#
+#$1:obj
+#$2:version
+#$3:filename
+#[$4:value...]
+#
+rsync_value() {
+	local obj="$1"
+	local version="$2"
+	local filename="$3"
+	shift 3
+	local value="$*"
+
+	if [[ -z "${obj}" || -z "${version}" || -z "${filename}" ]]; then
+		return ${e_inval}
+	fi
+
+	local file=$(rsync_file ${obj} ${version} ${filename})
+	if [ -z "${value}" ]; then
+		if [ -f "${file}" ]; then
+			#
+			# get
+			#
+			cat ${file}
+		else
+			return ${e_noexist}
+		fi
+	else
+		#
+		# set
+		#
+		echo ${value} > ${file}
+		fsync ${file}
+	fi
+}
+
+#
+#$1:obj
+#$2:version
+#$3:filename
+#
+rsync_getvalue() {
+	local obj="$1"
+	local version="$2"
+	local filename="$3"
+
+	rsync_value "${obj}" "${version}" "${filename}"
+}
+
+#
+#$1:obj
+#$2:version
+#$3:filename
+#$4:value...
+#
+rsync_setvalue() {
+	local obj="$1"
+	local version="$2"
+	local filename="$3"
+	shift 3
+
+	rsync_value "${obj}" "${version}" "${filename}" "$*"
+}
+
+get_rsync_version_list() {
+	local list=$(get_version_list 'md' 'rsync')
+	local version_0=$(get_rootfs_version 0)
+
+	#
+	# skip rootfs0's version
+	#
+	echo "${list//${version_0}}"
+}
+
+#
+#$1:version
+#
+rsync_delete_version() {
+	local version="$1"
+	local dir=$(rsync_version_dir 'md' ${version})
+
+	rm -fr ${dir}
+	rsync_echo_logger "rsync_version_delete" \
+		"delete rsync version:${version}"
+}
+
+rsync_limit_version_count() {
+	#
+	# skip rootfs0's version
+	#
+	local list="$(get_rsync_version_list)"
+	local count=$(get_version_count ${list})
+	local limit=$(get_rsync_version_limit)
+	local version
+
+	while ((count > limit)); do
+		version=$(get_min_version ${list})
+
+		rsync_echo_logger "rsync_limit_version_count" \
+			"rsync version list:${list}"
+		rsync_echo_logger "rsync_limit_version_count" \
+			"rsync version limit:${limit} count:${count}"
+
+		rsync_delete_version ${version}
+
+		#
+		# skip rootfs0's version
+		#
+		list="$(get_rsync_version_list)"
+		count=$(get_version_count ${list})
+	done
+}
+
+
+#
+# setup first md rsync version by rootfsX
+#
+#$1:idx
+#
+rsync_setup_by() {
+	local idx="$1"
+	local version="$(get_rootfs_version ${idx})"
+	local src="$(rootfs_dir ${idx})"
+	local dst="$(rsync_rootfs_dir 'md' ${version})"
+	local err
+
+	#
+	# maybe the rsync exist(maybe is a bad rsync)
+	#	so, delete the version first
+	#
+	rm -fr $(rsync_version_dir 'md' ${version}); sync
+	mkdir -p ${dst}
+	if ((0==idx)); then
+		remount_rootfs 0
+	fi
+	cp -fpR ${src}/* ${dst}; err=$?; sync
+	if ((0==idx)); then
+		remount_rootfs 0 "-r"
+	fi
+	if [ "0" != "${err}" ]; then
+		rsync_debug_error "copy ${src} to ${dst} failed:${err}"
+
+		return ${err}
+	fi
+
+	rsync_setvalue "md" ${version} "error" "0"
+	rsync_setvalue "md" ${version} "fsm" "ok"
+	rsync_setvalue "md" ${version} "state" "ok"
+
+	rsync_echo_logger "setup first md rsync version:${version}"
+}
+
+#
+#$1:version
+#$2:acc
+#
+newest_version_filter() {
+	local version="$1"
+	local acc="$2"
+	local state="$(rsync_getvalue 'md' ${version} 'state')"
+	local compare="$(version_compare ${version} ${acc})"
+
+	rsync_debug_trace "newest_version_filter" \
+		"version:${version} acc:${acc} compare:${compare} state:${state}"
+
+	if [[ "gt" == "${compare}" && "ok" == "${state}" ]]; then
+		echo "${version}"
+	else
+		echo "${acc}"
+	fi
+}
+
+#
+#$1:obj
+#
+__rsync_newest_version() {
+	local obj="$1"
+	local list="$(get_version_list ${obj} 'rsync')"
+	local version="$(get_version_byfilter ${MIN_VERSION} newest_version_filter ${list})"
+
+	#
+	# cannot rsync_echo_logger
+	#
+	rsync_logger "__rsync_newest_version" \
+		"newest ${obj} version:${version} from list:${list}"
+
+	echo "${version}"
+}
+
+#
+#$1:obj
+#
+rsync_newest_version() {
+	local obj="$1"
+	local newest="$(__rsync_newest_version ${obj})"
+
+	if [[ -z "${newest}" && "0" != "$(rootfs_current)" ]]; then
+		echo $(rsync_setup_by 0) > /dev/null 2>&1
+
+		newest="$(__rsync_newest_version ${obj})"
+	fi
+
+	echo "${newest}"
+}
+
+#
+#$1:obj
+#$2:version
+#
+rsync_task() {
+	local obj="$1"
+	local version="$2"
+	local json=$(rsync_getvalue "${obj}" "${version}" "json")
+	local server
+	local path
+	local port=${RSYNC_PORT}
+	local user=${RSYNC_USER}
+	local pass=${RSYNC_PASS}
+
+	rsync_echo_logger "rsync_task version ${version}..."
+
+	json_check "${json}" || {
+		rsync_debug_error "rsync_task bad json:${json}"
+
+		return ${e_rsync_bad_json}
+	}
+
+	local json_version="$(echo ${json} | jq -j '.version|strings')"
+	if [ ${version} != "${json_version}" ]; then
+		rsync_debug_error "rsync_task version ${version} not match json version ${json_version}"
+
+		return ${e_rsync_bad_version}
+	fi
+
+	server=$(echo ${json} | jq -j '.server|strings')
+	if [ -z "${server}" ]; then
+		rsync_debug_error "rsync_task bad server"
+
+		return ${e_rsync_bad_json}
+	fi
+
+	path=$(echo ${json} | jq -j '.path|strings')
+	if [ -z "${path}" ]; then
+		rsync_debug_error "rsync_task bad path"
+
+		return ${e_rsync_bad_json}
+	elif [[ "${path}" == "${path%rootfs}" || "${path}" == "${path%rootfs/}" ]]; then
+		#
+		# path NOT include version/rootfs
+		#
+		path=${path}/${version}/rootfs/
+	fi
+
+	port=$(echo ${json} | jq -j '.port|strings')
+	if [ -z "${port}" ]; then
+		port=${RSYNC_PORT}
+	fi
+
+	user=$(echo ${json} | jq -j '.user|strings')
+	if [ -z "${user}" ]; then
+		user=${RSYNC_USER}
+	fi
+
+	pass=$(echo ${json} | jq -j '.pass|strings')
+	if [ -z "${pass}" ]; then
+		pass=${RSYNC_PASS}
+	fi
+
+	local fsm="$(rsync_getvalue ${obj} ${version} 'fsm')"
+	local error="$(rsync_getvalue ${obj} ${version} 'error')"
+	rsync_echo_logger "start rsync_task with fsm:${fsm} error:${error}"
+
+	#
+	# check fsm
+	#
+	case "${fsm}" in
+	"ok")
+		#
+		# needn't rsync
+		#
+		rsync_echo_logger "the rsync version:${version} is ok, start upgrade"
+
+		${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+
+		return
+		;;
+	"rsyncing")
+		if [ "0" == "${error}" ]; then
+			#
+			#maybe rsync task abnormal exit
+			#
+			rsync_log "${obj}" "${version}" "check" "${e_rsync_last_abnormal}"
+		else
+			#
+			#last rsync task normal exit with error
+			#
+			do_nothing
+		fi
+		;;
+	"need")
+		do_nothing
+		;;
+	"")
+		#
+		# handle as need
+		# todo log
+		;;
+	*)
+		#
+		# handle as need
+		# todo log
+		;;
+	esac
+
+	#
+	# must end with /
+	#
+	# ${path%/}==>try remove last /
+	#	/a/b/c/==>/a/b/c
+	#	/a/b/c ==>/a/b/c
+	#
+	local remote=${path%/}/
+	local dir="$(rsync_rootfs_dir ${obj} ${version})"
+	local timeout=$(get_rsync_timeout_seconds)
+	#
+	# -a, --archive     	归档模式，表示以递归方式传输文件，并保持所有文件属性，等于-rlptgoD
+	# -r, --recursive		对子目录以递归模式处理
+	# -l, --links     		保留软链结
+	# -p, --perms    		保持文件权限
+	# -t, --times         	保持文件时间信息
+	# -g, --group    		保持文件属组信息
+	# -o, --owner    		保持文件属主信息
+	# -D, --devices 		保持设备文件信息
+	#
+	# -c, --checksum		打开校验开关，强制对文件传输进行校验
+	# -z, --compress 		对备份的文件在传输时进行压缩处理
+	# -v, --verbose 		详细模式输出
+	#
+	# -I, --ignore-times	不跳过那些有同样的时间和长度的文件
+	# --size-only         	当决定是否要备份文件时，仅仅察看文件大小而不考虑文件时间
+	# --delete      		删除那些DST中SRC没有的文件
+	# --force       		强制删除目录，即使不为空
+	# --block-size=SIZE		检验算法使用的块尺寸，默认是700字节
+	# --rsh=COMMAND 		指定使用rsh、ssh方式进行数据同步
+	# --timeout=TIME		超时时间，单位为秒
+	# --bwlimit=KBPS   		限制I/O带宽，KBytes per second
+	# --partial          	保留那些因故没有完全传输的文件，以是加快随后的再次传输
+	#
+	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
+	local rsync_dynamic="--rsh=\"${sshparam}\" --timeout=${timeout}"
+	local rsync_static="-acz --delete --force --stats --partial"
+	local rsyncaction="rsync ${rsync_dynamic} ${rsync_static} ${server}:${remote} ${dir}"
+	local err=0
+
+	rsync_echo_logger "rsync_task rsyncaction=${rsyncaction}"
+
+	rsync_setvalue "${obj}" "${version}" "fsm" "rsyncing"
+	rsync_setvalue "${obj}" "${version}" "error" "0"
+	rsync_do "${rsyncaction}"; err=$?
+	rsync_setvalue "${obj}" "${version}" "error" "${err}"
+
+	if [ "0" != "${err}" ]; then
+		rsync_echo_logger "rsync_task rsync error=${err}"
+
+		return ${e_rsync_abnormal}
+	fi
+
+	#
+	# rsync ok
+	#
+	rsync_setvalue "${obj}" "${version}" "fsm" "ok"
+	#
+	# prepare upgrade
+	#
+	rsync_setvalue "${obj}" "${version}" "state" "need"
+	rsync_echo_logger "rsync_task version:${version} ok, start upgrade"
+
+	${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+
+	return ${err}
+}
+
+rsync_auto() {
+	local list="$(get_version_list 'md' 'rsync')"
+	local version
+
+	rsync_logger "rsync_auto" "..."
+
+	for version in ${list}; do
+		local fsm="$(rsync_setvalue 'md' ${version} 'fsm')"
+		local state="$(rsync_setvalue 'md' ${version} 'state')"
+
+		if [[ "need" == "${fsm}" || "rsyncing" == "${fsm}" ]]; then
+			rsync_logger "rsync_auto" \
+			 	"start rsync_task with version:${version} fsm:${fsm}"
+
+			rsync_task "md" "${version}"
+		fi
+	done
+}
+
+#
+#$1:obj
+#$2:json
+#
+rsync_start() {
+	local obj="$1"; shift
+	local json="$*"
+	local safejson="$(echo ${json} | jq 'del(.pass)')"
+	local err
+
+	rsync_logger "rsync_start" \
+		"json ${safejson}..."
+
+	local version=$(echo ${json} | jq -j '.version|strings')
+	version_check ${version} || {
+		rsync_debug_error "rsync_start" \
+			"bad version ${version}"
+
+		return ${e_rsync_bad_version}
+	}
+	if [ "${version}" == "$(get_rootfs_version)" ]; then
+		rsync_echo_logger "input version:${version}==rootfs version, needn't rsync"
+
+		return
+	fi
+
+
+	local dir="$(rsync_rootfs_dir ${obj} ${version})"
+	#
+	# version is exist
+	#
+	if [ -d "${dir}" ]; then
+		local base_setuped=0
+		local fsm="$(rsync_setvalue ${obj} ${version} 'fsm')"
+		local state="$(rsync_setvalue ${obj} ${version} 'state')"
+
+		if [ -z "${fsm}" ]; then
+			#
+			# have NOT setup rsync base version
+			#	but the rsync is break
+			#
+			rm -fr $(rsync_version_dir ${obj} ${version}); sync
+		else
+			#
+			# have setup rsync base version
+			#	but the rsync is break
+			#
+			# todo: check state is ok ???
+			#
+			rsync_echo_logger "rsync_start" \
+				"exist version:${version} with fsm:${fsm} state:${state}"
+		fi
+	fi
+
+	#
+	# version is NOT exist
+	#
+	if [ ! -d "${dir}" ]; then
+		local newest="$(rsync_newest_version ${obj})"
+		if [ -z "${newest}" ]; then
+			rsync_debug_error "rsync_start" \
+				"no found version ${version} and no found newest"
+
+			return ${e_rsync_no_version}
+		fi
+
+		rsync_echo_logger "rsync_start: setup rsync base version by ${newest}..."
+		#
+		# use newest as rsync base version
+		#
+		local newestdir="$(rsync_rootfs_dir ${obj} ${newest})"
+		mkdir -p ${dir}
+		cp -fpR ${newestdir}/* ${dir}; sync
+		#
+		# todo: check
+		#
+		rsync_echo_logger "rsync_start" \
+			"setup rsync base version by ${newest} ok"
+
+		rsync_setvalue "${obj}" "${version}" "error" "0"
+		rsync_setvalue "${obj}" "${version}" "fsm" "need"
+	fi
+	#
+	# save json
+	#
+	rsync_setvalue "${obj}" "${version}" "json" "${json}"
+
+	rsync_task "${obj}" "${version}"; err=$?
+	rsync_echo_logger "rsync_start err:${err}"
+}
+
+do_rsync() {
+	local json="$*"
+
+	if [ -z "${json}" ]; then
+		#
+		# start by auto
+		#
+		rsync_auto
+	else
+		#
+		# start by cloud/manual
+		#
+		rsync_start 'md' "${json}"
+	fi
+}
+
+#
+#	rsync start, after get rsync command from cloud
+#	input:
+#	$1:{"version":"xxx","server":"xxx","port":"xxx","path":"xxx","user":"xxx","pass":"xxx"}
+#
+#
+rsync_with_flock() {
+	local err=0;
+
+	exec_with_flock ${file_lock_rsync_task} do_rsync "$*"; err=$?
+
+	return ${err}
+}

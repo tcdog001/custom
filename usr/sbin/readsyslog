@@ -1,0 +1,7 @@
+#!/bin/bash
+
+main() {
+	cat /opt/log/sys/md/ulog/messages
+}
+
+main "$@"

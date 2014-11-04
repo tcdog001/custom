@@ -1,0 +1,29 @@
+#!/bin/sh       
+
+. /etc/platform/bin/platform.in
+ 
+export TZ=UTC-8
+date >>/mnt/flash/rootfs_data/startime 2>/dev/null
+
+date >/mnt/flash/rootfs_data/lastSuccessTime 2>/dev/null
+sleep 10
+
+MAC=$(cat $FILE_REGISTER |awk -F ',' '{print $4}' |awk -F '"' '{print $4}' |sed 's/:/-/g') 2>/dev/null
+if [ ! -z $MAC ];then
+	echo $MAC >/mnt/flash/rootfs_data/ap_mac
+else
+	date >/mnt/flash/rootfs_data/lastSuccessTime 2>/dev/null
+	sleep 60
+	arpMAP=$(arp 1.0.0.1 |awk -F ' ' '{print $4}' |sed 's/:/-/g')
+	if [ ! -z $arpMAC ];then
+		echo $arpMAC >/mnt/flash/rootfs_data/ap_mac
+	fi
+fi
+
+ 
+while :
+do
+date >/mnt/flash/rootfs_data/lastSuccessTime 2>/dev/null
+sleep 60
+
+done

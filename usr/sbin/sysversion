@@ -1,0 +1,39 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/jsock/jsock.in
+. ${__ROOTFS__}/etc/upgrade/rsync.in
+
+#
+#$1:idx or buddy or ap
+#
+main() {
+	local idx="$1"
+
+	if [ "ap" == "${idx}" ]; then
+		${__ROOTFS__}/etc/jsock/jcmd_syn.sh cat /etc/.version &
+
+		return
+	fi
+
+	case "${idx}" in
+	"0")
+		do_nothing
+		;;
+	"1")
+		do_nothing
+		;;
+	"2")
+		do_nothing
+		;;
+	"buddy")
+		idx=$(rootfs_buddy)
+		;;
+	*)
+		idx=$(rootfs_current)
+		;;
+	esac
+
+	echo $(get_rootfs_version ${idx})
+}
+
+main "$@"

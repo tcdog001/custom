@@ -1,0 +1,70 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+
+#
+#$1:version
+#$2:idx
+#
+rollback_md() {
+	local version=$1
+	local idx=$2
+
+	if ((0==idx)); then
+		umount ${dir_rootfs0} > /dev/null 2>&1
+		mount -t ext4 ${dev_rootfs0} ${dir_rootfs0} > /dev/null 2>&1
+	fi
+	echo ${version} > /rootfs${idx}/etc/.version
+	if ((0==idx)); then
+		umount ${dir_rootfs0} > /dev/null 2>&1
+		mount -t ext4 -r ${dev_rootfs0} ${dir_rootfs0} > /dev/null 2>&1
+	fi
+}
+
+#
+#$1:version
+#
+rollback_ap() {
+	local version=$1
+
+	${__ROOTFS__}/etc/jsock/jcmd_asyn.sh echo "${version} > /etc/.version"
+}
+
+#
+#$1:version
+#[$2:idx or ap]
+#
+main() {
+	local version=$1
+	local target=$2
+
+	version_check ${version} || {
+		echo "bad version:${version}"
+
+		return
+	}
+
+	case "${target}" in
+	"0")
+		rollback_md ${version} 0
+		;;
+	"1")
+		rollback_md ${version} 1
+		;;
+	"2")
+		rollback_md ${version} 2
+		;;
+	"ap")
+		rollback_ap ${version}
+		;;
+	"")
+		rollback_md ${version} 0
+		rollback_md ${version} 1
+		rollback_md ${version} 2
+
+		rollback_ap ${version}
+		;;
+	esac
+}
+
+main "$@"

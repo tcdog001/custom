@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/utils.in
+
+readonly file_monitors_interval=/tmp/.monitors_interval
+readonly file_lock_monitors=/tmp/.monitors.lock
+
+monitor() {
+	for ((;;)); do
+		local interval=$(getfilevalue ${file_monitors_interval} 1)
+
+		#
+		# sleep first
+		#
+		sleep ${interval}
+
+		monitortask monitord
+	done
+}
+
+main() {
+#	exec_with_flock ${file_lock_monitors} monitor
+	monitor
+}
+
+main "$@"

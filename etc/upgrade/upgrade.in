@@ -1,0 +1,707 @@
+#!/bin/bash
+
+if [ -n "${__UPGRADE_UPGRADE_IN__}" ]; then
+	return
+else
+	__UPGRADE_UPGRADE_IN__="$0"
+fi
+
+. ${__ROOTFS__}/etc/upgrade/rsync.in
+
+readonly upgrade_state_list="need upgrading verfy ok fail"
+#	xx_state
+#		need
+#			after rsync task sucess
+#			before start upgrade task
+#			set xx_state to need
+#		upgrading
+#			upgrade task init, set xx_state to upgrading
+#		verfy
+#			upgrade task success need to verfy, set xx_state to verfy
+#		ok
+#			startup ok, set self xx_state to ok
+#		fail
+#			startup fail, set buddy xx_state to ok
+
+upgrade_debug_ok() {
+	debug_echo "__upgrade__" "__all__" "__ok__" $@
+}
+
+upgrade_debug_error() {
+	debug_echo "__upgrade__" "__all__" "__error__" $@
+}
+
+upgrade_debug_trace() {
+	debug_echo "__upgrade__" "__all__" "__trace__" $@
+}
+
+upgrade_logger() {
+	do_logger "upgrade" "$@"
+}
+
+upgrade_echo_logger() {
+	echo_logger "upgrade" "$@"
+}
+
+#
+#$1:action
+#
+upgrade_do() {
+	debug_do upgrade "$*"
+}
+
+readonly file_lock_upgrade_task=/tmp/.upgrade_task.lock
+
+upgrade_task_running() {
+	local err=0
+
+	exec_with_flock ${file_lock_upgrade_task} echo; err=$?
+	if [ "${e_flock_failed}" == "${err}" ]; then
+		echo 'running'
+	fi
+}
+
+setbootm() {
+	bootm "$@"
+
+	upgrade_echo_logger "bootm" "rootfs$(rootfs_current):bootm $@"
+}
+
+#
+#$1:idx
+#
+bootm_fail() {
+	local idx="$1"
+	local buddy=$(rootfs_buddy ${idx})
+
+	#
+	# set bootenv rootfs = rootfsX's buddy
+	# set bootenv rootfsX state = fail
+	# set bootenv rootfsX error = 0
+	#
+	setbootm \
+		"rootfs=${buddy}" \
+		"rootfs${idx}=f" \
+		"rootfs${idx}err=0"
+}
+
+#
+#$1:idx
+#
+bootm_verfy() {
+	local idx=$1
+
+	#
+	# set bootenv startup rootfs to rootfsX
+	# set bootenv rootfsX's error to 0
+	#
+	setbootm \
+		"rootfs=${idx}" \
+		"rootfs${idx}=v" \
+		"rootfs${idx}err=0"
+}
+
+bootm_ok() {
+	local current="$(rootfs_current)"
+
+	#
+	# startup ok
+	#
+	# set bootenv current rootfs state to ok
+	# set bootenv current rootfs error to 0
+	#
+	setbootm \
+		"rootfs${current}=o" \
+		"rootfs${current}err=0"
+}
+
+#
+#$1:idx
+#
+bootm_state() {
+	local idx=$1
+
+	echo "$(bootm rootfs${idx})"
+}
+
+#
+#$1:src
+#$2:dst
+#
+# copy src to dst, skip ${src}/integrity
+#
+rootfs_copy() {
+	local src="$1"
+	local dst="$2"
+	local list="$(ls ${src})"
+	local sub
+	local result=0
+
+	list=${list//integrity}
+	for sub in ${list}; do
+		local err
+
+		cp -fpR ${src}/${sub} ${dst}; err=$?; sync
+		if [ "0" != "${err}" ]; then
+			result=${err}
+
+			upgrade_echo_logger "rootfs_copy" \
+				"ERROR[${err}]:cp -fpR ${src}/${sub} ${dst}"
+		fi
+	done
+
+	return ${result}
+}
+
+#
+#$1:idx
+#[$2:version]
+#
+# (1) super recover (current rootfs is rootfs0)
+# 	rootfs_upgrade X ==> use newest rsync version to upgrade rootfsX
+# (2) normal upgrade (current rootfs is rootfs1/2)
+# 	rootfs_upgrade X version==> use the rsync version to upgrade rootfsX
+#
+rootfs_upgrade() {
+	local idx="$1"
+	local version="$2"
+	local current=$(rootfs_current)
+	local set_state
+	local state
+
+	upgrade_echo_logger "rootfs_upgrade" \
+		"upgrade with idx:${idx} version:${version} ..."
+
+	#
+	# protected rootfs0 and current-rootfs
+	#
+	if [ "0" == "${idx}" ]; then
+		upgrade_debug_error "rootfs_upgrade" \
+			"cannot upgrade rootfs0"
+
+		return ${e_inval}
+	elif [ "${current}" == "${idx}" ]; then
+		upgrade_debug_error "rootfs_upgrade" \
+			"cannot upgrade current rootfs"
+
+		return ${e_inval}
+	fi
+
+	#
+	# no input version
+	#
+	if [ -z "${version}" ]; then
+		upgrade_echo_logger "rootfs_upgrade" \
+			"no input version:${version}"
+
+		version="$(rsync_newest_version 'md')"
+
+		upgrade_echo_logger "rootfs_upgrade" \
+			"use newest version:${version}"
+	else
+		state="$(rsync_getvalue 'md' ${version} 'state')"
+
+		upgrade_echo_logger "rootfs_upgrade" \
+			"input version:${version} state:${state}"
+
+		case "${state}" in
+		"need")
+			upgrade_echo_logger "rootfs_upgrade" \
+				"rsync ok, can upgrade use this version:${version}"
+
+			set_state=on
+			;;
+		"upgrading")
+			upgrade_echo_logger "rootfs_upgrade" \
+				"last upgrade is break, upgrade again use this version:${version}"
+			set_state=on
+			;;
+		"verfy")
+			upgrade_echo_logger "rootfs_upgrade" \
+				"last upgraded version:${version} wait verfy, don't need upgrade again"
+			return 0
+			;;
+		"ok")
+			upgrade_echo_logger "rootfs_upgrade" \
+				"upgrade have verfy ok, can upgrade use this version:${version}"
+			;;
+		"fail")
+			version="$(rsync_newest_version 'md')"
+			upgrade_echo_logger "rootfs_upgrade" \
+				"use newest version:${version}"
+			;;
+		*)
+			version="$(rsync_newest_version 'md')"
+			upgrade_echo_logger "rootfs_upgrade" \
+				"use newest version:${version}"
+			;;
+		esac
+	fi
+
+	#
+	# check version again
+	#
+	if [ -z "${version}" ]; then
+		upgrade_echo_logger "rootfs_upgrade" \
+		 	"no found newest version"
+
+		return ${e_rsync_no_version}
+	fi
+
+	local src=$(rsync_rootfs_dir 'md' ${version})
+	local dst=$(rootfs_dir ${idx})
+	local err=0
+
+	#
+	# befor copy
+	#	save buddy version
+	# 	set buddy to fail
+	#	set rsync version's state to upgraging
+	#
+	if [ "0" != "${current}" ]; then
+		set_buddy_version "${version}"
+	fi
+	bootm_fail ${idx}
+	if [ -n "${set_state}" ]; then
+		rsync_setvalue "md" ${version} "state" "upgrading"
+	fi
+	#
+	# clean dst rootfs
+	# copy rootfs
+	#
+	rm -fr ${dst}/*
+	cp -fpR ${src}/* ${dst}; err=$?; sync
+	if [ "0" != "${err}" ]; then
+		upgrade_debug_error "rootfs_upgrade" \
+		 	"upgrade ${src} to ${dst} failed:${err}"
+
+		return ${err}
+	fi
+	#
+	# create buddy's /etc/.upgrade_verfy
+	#
+	touch $(upgrade_verfy_file ${idx})
+	#
+	# set buddy's /etc/.upgrade_type = rsync
+	#
+	set_upgrade_type "rsync" ${idx}
+	#
+	# set buddy's /etc/.buddy_version = self version
+	#
+	set_buddy_version "$(get_rootfs_version)" "${idx}"
+	#
+	# set rsync version's state = verfy
+	#
+	if [ -n "${set_state}" ]; then
+		rsync_setvalue "md" ${version} "state" "verfy"
+	fi
+
+	upgrade_echo_logger "rootfs_upgrade" \
+		"upgrade idx:${idx} to version:${version} ok"
+
+	bootm_verfy ${idx}
+}
+
+#
+#$1:version
+#
+upgrade_with_flock() {
+	local version="$1"
+	local err=0
+
+	exec_with_flock ${file_lock_upgrade_task} \
+		rootfs_upgrade $(rootfs_buddy) ${version}; err=$?
+
+	return ${err}
+}
+
+super_recover_reboot() {
+	upgrade_echo_logger "notify ap super_recover_reboot"
+
+	${__ROOTFS__}/etc/jsock/sig/super_recover_reboot.sh
+
+	sysreboot &
+}
+
+#
+#$1:obj
+#$2:idx
+#$3:version
+#
+rootfs_notify_agent_upgrade_failed() {
+	local obj="$1"
+	local idx="$2"
+	local version="$3"
+
+	#todo
+	echo "todo: notify agent upgrade failed"
+
+	return
+}
+
+#
+#$1:obj
+#
+rootfs_notify_agent_rsync_all_bad() {
+	local obj="$1"
+
+	#todo
+	echo "todo: notify agent all rsync bad"
+
+	return
+}
+
+# rootfs init check, current-rootfs is ?
+#	(1) rootfs0:
+# 		==>rootfs1/rootfs2 is bad, do super recover
+#		find a good newest rootfs from rsyncX
+#			if found
+#				upgrade rootfs1
+#				upgrade rootfs2
+#				notify pingpong
+#				reboot
+#			if no found
+#				notify agent to need whole upgrade
+#				exit
+rootfs_super_recover() {
+	local newest="$(rsync_newest_version 'md')"
+	local err1
+	local err2
+
+	#
+	# exist rsync version
+	#
+	if [ -n "${newest}" ]; then
+		#
+		# first upgrade rootfs1
+		# first startup from rootfs2
+		#
+		rootfs_upgrade 1; err1=$?
+		upgrade_echo_logger "super_recover" \
+			"recover rootfs1 err:${err1}"
+
+		rootfs_upgrade 2; err2=$?
+		upgrade_echo_logger "super_recover" \
+			"recover rootfs2 err:${err2}"
+
+		if ((0==err1 || 0==err2)); then
+			super_recover_reboot
+
+			return
+		else
+			#
+			# all failed when use rsync version
+			#	do down, try dd again
+			#
+			newest=""
+			do_nothing
+		fi
+	fi
+
+	#
+	# no rsync version, try dd
+	#
+	if [ -z "${newest}" ]; then
+		upgrade_echo_logger "super_recover" \
+			"no found newest version, try dd"
+
+		#
+		# first upgrade rootfs2
+		# first startup from rootfs1
+		#
+		dd if=${dev_rootfs0} of=${dev_rootfs2}; err2=$?
+		if ((0==err2)); then
+			setbootm \
+				"rootfs=2" \
+				"rootfs2=o" \
+				"rootfs2err=0"
+		fi
+		upgrade_echo_logger "super_recover" \
+			"dd recover rootfs2 err:${err2}"
+
+
+		dd if=${dev_rootfs0} of=${dev_rootfs1}; err1=$?
+		if ((0==err1)); then
+			setbootm \
+				"rootfs=1" \
+				"rootfs1=o" \
+				"rootfs1err=0"
+		fi
+		upgrade_echo_logger "super_recover" \
+			"dd recover rootfs1 err:${err1}"
+
+		if ((0==err1 || 0==err2)); then
+			super_recover_reboot
+
+			return
+		fi
+	fi
+
+	#
+	# todo: all failed, how to do ???
+	#
+}
+
+#
+# rootfs init check, current-rootfs is ?
+#	(2)	rootfs1/2: check upgrade_verfy_file
+#		(2.4) self found, buddy found
+#			==>after super recover goto here
+#			remove self upgrade_verfy_file
+#			do pingpong, to check buddy
+#			exit
+#
+rootfs_super_recover_to_here() {
+	upgrade_echo_logger "rootfs_super_recover_to_here"
+
+	#
+	# clean self verfy state(in rootfs)
+	#
+	rm -f $(upgrade_verfy_file)
+
+	bootm_verfy $(rootfs_buddy)
+
+	#
+	# reboot and swich to buddy
+	#
+	sysreboot &
+}
+
+#	(2)	rootfs1/2: check upgrade_verfy_file
+#		(2.2) self found, buddy no found
+#			==>pingpong to here
+#			set xx_state to ok
+#			remove self upgrade_verfy_file
+#			exit
+#
+rootfs_pingpon_to_here() {
+	local version="$(get_rootfs_version)"
+	local err=0
+
+	#
+	# update version to ok(in version)
+	#
+	rsync_setvalue "md" "${version}" "state" "ok"
+	#
+	# clean self verfy state(in rootfs)
+	#
+	rm -f $(upgrade_verfy_file)
+
+	#
+	# buddy need upgrade ???
+	#
+	local buddy_version="$(get_buddy_version)"
+	if [ "eq" == "$(version_compare ${buddy_version} ${version})" ]; then
+		upgrade_debug_trace "rootfs_pingpon_to_here" \
+			"buddy version:${buddy_version} = self version:${version}"
+
+		#
+		# check version count, if count > limit, try delete
+		#
+		rsync_limit_version_count
+	else
+		#
+		# buddy need upgrade(maybe rollback) !!!
+		#
+		upgrade_echo_logger "rootfs_pingpon_to_here" \
+			"buddy version:${buddy_version} != self version:${version}, to upgrade buddy"
+
+		upgrade_with_flock "${version}"; err=$?
+	fi
+
+	return ${err}
+}
+
+#
+# rootfs init check, current-rootfs is ?
+#	(2)	rootfs1/2: check upgrade_verfy_file
+#		(2.3) self no found, buddy found
+#			==>pingpong failed
+#			set xx_state to fail, and notify agent to report
+#			upgrade buddy
+#			exit
+#
+rootfs_pingpon_fail() {
+	local self_version="$(get_rootfs_version)"
+	local buddy_version="$(get_buddy_version)"
+	local buddy=$(rootfs_buddy)
+	local err=0
+
+	rsync_setvalue "md" "${buddy_version}" "state" "fail"
+	rootfs_notify_agent_upgrade_failed 'md' "${buddy}" "${buddy_version}"
+
+	upgrade_echo_logger "rootfs_pingpon_fail" \
+			"try recover buddy(rootfs${buddy}) use self version:${self_version}"
+	upgrade_with_flock ${self_version}; err=$?
+
+	return ${err}
+}
+
+rootfs_init_normal() {
+	local version_0=$(get_rootfs_version 0)
+	local dir_version_0=$(rsync_version_dir 'md' ${version_0})
+	local err=0
+
+	#
+	# if no found rsync version == rootfs0's version
+	#
+	if [ ! -d "${dir_version_0}" ]; then
+		rsync_setup_by 0
+	fi
+
+	upgrade_echo_logger "rootfs_init_normal" \
+		"current rootfs$(rootfs_current) startup normal"
+
+	#
+	#try usb upgrade
+	#
+	${__ROOTFS__}/etc/upgrade/usbupgrade.sh; err=$?
+
+	return ${err}
+}
+
+rootfs_ok() {
+	echo "I'm ok"
+
+	bootm_ok
+
+	usr/sbin/sysled sys on
+}
+
+rootfs_init() {
+	local current=$(rootfs_current)
+	local buddy=$(rootfs_buddy)
+	#
+	# save bootm's buddy state, before rootfs_ok
+	#
+	local buddy_state="$(bootm_state ${buddy})"
+	local err=0;
+
+	if [ "0" == "${current}" ]; then
+		rootfs_super_recover; err=$?
+
+		return ${err}
+	fi
+
+	#
+	# set current rootfs ok
+	#
+	rootfs_ok
+
+	local self_version="$(get_rootfs_version)"
+	local buddy_version="$(get_buddy_version)"
+	#
+	# o:normal
+	# v:maybe after super recover
+	# f:maybe last upgrade copy is break, or other ....
+	#   just recover it use current rootfs's version
+	#
+	if [[ "o" != "${buddy_state}" && "v" != "${buddy_state}" ]]; then
+		upgrade_echo_logger "upgrade" \
+			"rootfs${current}'s buddy is in state:${buddy_state}"
+		upgrade_echo_logger "upgrade" \
+			"current version:${self_version} and buddy version:${buddy_version}"
+		upgrade_echo_logger "upgrade" \
+			"try re-upgrade it use version:${buddy_version}"
+
+		upgrade_with_flock ${buddy_version}; err=$?
+		#
+		#	try handshake version
+		#
+		if ((0==err)); then
+			${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
+		fi
+
+		return ${err}
+	fi
+
+	#
+	# buddy rootfs bootenv state is ok/verfy
+	#	to check verfy file
+	#
+	local self_verfy_file=$(upgrade_verfy_file)
+	local buddy_verfy_file=$(upgrade_verfy_file ${buddy})
+	#
+	# default do handshake
+	#
+	local handshake=1
+
+	if [ -f "${self_verfy_file}" ]; then
+		if [ -f "${buddy_verfy_file}" ]; then
+			#
+			# self found, buddy found
+			#
+			rootfs_super_recover_to_here; err=$?
+			#
+			# don't handshake
+			#
+			handshake=0
+		else
+			#
+			# self found, buddy no found
+			#
+			rootfs_pingpon_to_here; err=$?
+		fi
+	else
+		if [ -f "${buddy_verfy_file}" ]; then
+			#
+			# self no found, buddy found
+			#
+			rootfs_pingpon_fail; err=$?
+		else
+			#
+			# self no found, buddy no found
+			#	need to check bootenv
+			#
+
+			#
+			# in bootenv
+			#	buddy state
+			#
+			case "${buddy_state}" in
+			"o")
+				#
+				# buddy is ok
+				#
+				rootfs_init_normal; err=$?
+				;;
+			"f")
+				#
+				# buddy is destroy
+				#	should not goto here
+				#
+				upgrade_echo_logger "upgrade" \
+					"rootfs${current}'s buddy is destroy, " \
+					"try recover it use current rootfs version:${self_version}"
+				upgrade_with_flock ${self_version}; err=$?
+				;;
+			"v")
+				#
+				# buddy is verfy
+				# 	should not goto here
+				#
+				upgrade_echo_logger "upgrade" \
+					"rootfs${current}'s buddy is in verfy, " \
+					"the buddy version:${buddy_version} is bad, " \
+					"try recover it use current rootfs version:${self_version}"
+				upgrade_with_flock ${self_version}; err=$?
+				;;
+			*)
+				#
+				# buddy is unknow
+				# 	should not goto here
+				#
+				upgrade_echo_logger "upgrade" \
+					"rootfs${current}'s buddy is in unknown state:${buddy_state}, " \
+					"the buddy version:${buddy_version} maybe bad, " \
+					"try recover it use current rootfs version:${self_version}"
+				upgrade_with_flock ${self_version}; err=$?
+				;;
+			esac
+		fi
+	fi
+
+	if ((0==err && 1==handshake)); then
+		${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
+	fi
+}

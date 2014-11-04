@@ -1,0 +1,7 @@
+#!/bin/bash
+
+main() {
+	cat /proc/partitions
+}
+
+main "$@"

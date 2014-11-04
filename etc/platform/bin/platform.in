@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -n "${__PLATFORM_BIN_PLATFORM_IN__}" ]; then
+	return
+else
+	__PLATFORM_BIN_PLATFORM_IN__="$0"
+fi
+
+readonly FILE_REGISTER=/tmp/.register.json
+
