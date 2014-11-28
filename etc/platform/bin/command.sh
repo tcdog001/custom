@@ -41,7 +41,7 @@ if [ -f $FILE_REGISTER ];then
  		echo "Get the Command :"$myCommand";time is :"`date`>> $COMMAND_FILE_RE
 		logger "platform" "command:$myCommand"
 
-		$myCommand
+		eval "$myCommand"
 	done
 	if [ -f $COMMAND_FILE ];then
 		rm $COMMAND_FILE
