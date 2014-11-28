@@ -36,7 +36,7 @@ get_memory_use() {
 }
 
 get_board_ONOFFtime() {
-	boardONtime=`cat /data/startime |sed -n '$p'`
+	boardONtime=`cat /data/md-on |sed -n '$p'`
 	if [ -z "$boardONtime" ];then
 		boardONtime="NO ON TIME"
 	fi

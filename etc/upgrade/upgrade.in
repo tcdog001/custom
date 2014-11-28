@@ -265,12 +265,7 @@ rootfs_upgrade() {
 	if [ -n "${set_state}" ]; then
 		rsync_setvalue "md" ${version} "state" "upgrading"
 	fi
-	#
-	# clean dst rootfs
-	# copy rootfs
-	#
-	rm -fr ${dst}/*
-	cp -fpR ${src}/* ${dst}; err=$?; sync
+	rsync_copy ${src} ${dst}; err=$?
 	if [ "0" != "${err}" ]; then
 		upgrade_debug_error "rootfs_upgrade" \
 		 	"upgrade ${src} to ${dst} failed:${err}"

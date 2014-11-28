@@ -110,8 +110,7 @@ usbupgrade_rootfs() {
 	local err=0
 	local tag
 
-	rm -fr ${dst}/*; sync
-	cp -fpR ${src}/* ${dst}; err=$?; sync
+	rsync_copy ${src} ${dst}; err=$?
 
 	local tag
 	if [ "0" != "${err}" ]; then
@@ -120,6 +119,24 @@ usbupgrade_rootfs() {
 		tag="OK"
 	fi
 	usbupgrade_echo_logger "${tag}: copy ${src} to ${dst}"
+
+	return ${err}
+}
+
+usbupgrade_website() {
+	local src=${dir_usb_upgrade_website}
+	local dst=${dir_website_upgrade}
+	local err=0
+	
+	rsync_copy ${src} ${dst}; err=$?
+
+        local tag
+        if [ "0" != "${err}" ]; then
+                tag="ERROR[${err}]"
+        else
+                tag="OK"
+        fi
+        usbupgrade_echo_logger "${tag}: copy ${src} to ${dst}"
 
 	return ${err}
 }
@@ -166,6 +183,14 @@ usbupgrade_phase1() {
 	# upgrade buddy
 	#
 	usbupgrade_rootfs ${buddy}; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
+
+	#
+	# upgrade website
+	#
+	usbupgrade_website; err=$?
 	if ((0!=err)); then
 		return ${err}
 	fi

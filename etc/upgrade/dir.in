@@ -24,7 +24,12 @@ readonly dir_hd=/mnt/hd
 readonly dir_usb=/mnt/usb
 readonly dir_tftp=/tmp/tftp
 readonly dir_status=/tmp/status
-readonly dir_websit=${dir_hd}/website
+readonly dir_plt=/tmp/platform
+readonly dir_website=${dir_hd}/website
+readonly dir_website_upgrade=${dir_hd}/website_upgrade
+readonly dir_website_config=${dir_hd}/website_config
+
+readonly file_website_config=${dir_website_config}/website.conf
 
 #
 # usb dir
@@ -32,6 +37,7 @@ readonly dir_websit=${dir_hd}/website
 readonly dir_usb_upgrade=${dir_usb}/upgrade
 readonly dir_usb_upgrade_rootfs=${dir_usb_upgrade}/rootfs
 readonly dir_usb_upgrade_rootfs_data=${dir_usb_upgrade}/rootfs_data
+readonly dir_usb_upgrade_website=${dir_usb_upgrade}/website
 
 
 #
@@ -339,9 +345,10 @@ mount_hd() {
 		usr/sbin/sysled sata on
 	}
 
-	if [ -d "${dir_websit}" ]; then
-		chmod -R 777 ${dir_websit}
+	if [ -d "${dir_website}" ]; then
+		chmod -R 777 ${dir_website}
 	fi
+	mkdir -p ${dir_website_upgrade} ${dir_website_config}
 
 	LN_DIR ${dir_hd} ${link_hd}
 }
@@ -530,19 +537,63 @@ get_version_list() {
 
 
 #
-# opt dir, must link to /opt
+# config dir, link to /config
+#
+readonly dir_config=${dir_rootfs_data}/config
+
+#
+# backup dir, link to /backup
+#
+readonly dir_backup=${dir_rootfs_data}/backup
+readonly dir_backup_log=${dir_backup}/log
+
+#
+# opt dir, link to /opt
 #
 readonly dir_opt=${dir_rootfs_data}/opt
 
 readonly dir_opt_log=${dir_opt}/log
 readonly dir_opt_log_gps=${dir_opt_log}/gps
-readonly dir_opt_log_usr=${dir_opt_log}/usr
+
+readonly dir_opt_log_dev=${dir_opt_log}/dev
+readonly dir_opt_log_dev_info=${dir_opt_log_dev}/info
+readonly dir_opt_log_dev_monitor=${dir_opt_log_dev}/monitor
+
+readonly dir_opt_log_vcc=${dir_opt_log}/vcc
+
+readonly dir_opt_log_drop=${dir_opt_log}/drop
+readonly dir_opt_log_drop_wifi=${dir_opt_log_drop}/wifi
+readonly dir_opt_log_drop_3g=${dir_opt_log_drop}/3g
+readonly dir_opt_log_drop_gps=${dir_opt_log_drop}/gps
+
+readonly dir_opt_log_onoff=${dir_opt_log}/onoff
+
+readonly dir_opt_log_flow=${dir_opt_log}/flow
+readonly dir_opt_log_flow_user=${dir_opt_log_flow}/user
+readonly dir_opt_log_flow_3g=${dir_opt_log_flow}/3g
+
 readonly dir_opt_log_nginx=${dir_opt_log}/nginx
 readonly dir_opt_log_nginx_error=${dir_opt_log_nginx}/error
 readonly dir_opt_log_nginx_access=${dir_opt_log_nginx}/access
+readonly file_nginx_access_log=${dir_opt_log_nginx_access}/nginx.log
+readonly file_nginx_error_log=${dir_opt_log_nginx_error}/nginx.log
+
+readonly dir_opt_log_squid=${dir_opt_log}/squid
+readonly dir_opt_log_squid_error=${dir_opt_log_squid}/error
+readonly dir_opt_log_squid_access=${dir_opt_log_squid}/access
+readonly file_squid_access_log=${dir_opt_log_squid_access}/squid.log
+readonly file_squid_error_log=${dir_opt_log_squid_error}/squid.log
+
 readonly dir_opt_log_php=${dir_opt_log}/php
 readonly dir_opt_log_phpfpm_error=${dir_opt_log_php}/error
+
+readonly dir_opt_log_upgrade=${dir_opt_log}/upgrade
+readonly dir_opt_log_upgrade_content=${dir_opt_log_upgrade}/content
+readonly dir_opt_log_upgrade_system=${dir_opt_log_upgrade}/system
+
+readonly dir_opt_log_usr=${dir_opt_log}/usr
 readonly dir_opt_log_auth=${dir_opt_log}/auth
+
 readonly dir_opt_log_sys=${dir_opt_log}/sys
 readonly dir_opt_log_sys_md=${dir_opt_log_sys}/md
 readonly dir_opt_log_sys_md_init=${dir_opt_log_sys_md}/init
@@ -557,6 +608,8 @@ readonly dir_opt_data=${dir_opt}/data
 readonly dir_opt_data_gps=${dir_opt_data}/gps
 readonly dir_opt_data_3g=${dir_opt_data}/3g
 
+readonly file_md_ulog=${dir_opt_log_sys_md_ulog}/messages
+
 #
 #$1:idx
 #
@@ -566,6 +619,19 @@ mount_rootfs_data() {
 	do_mount ${dev_rootfs_data} ${dir_rootfs_data} 5 "no" || {
 		return $?
 	}
+	
+	mkdir -p \
+		${dir_config} \
+		${dir_backup_log} \
+		${dir_ap_version} \
+		${dir_md_version} \
+		${dir_ap_rsync} \
+		${dir_md_rsync}
+
+        local dir
+        for dir in ${!dir_opt_*}; do
+                mkdir -p ${!dir}
+        done
 
 	#
 	# link /mnt/flash/rootfs_data to /data
@@ -577,45 +643,26 @@ mount_rootfs_data() {
 	#
 	LN_DIR ${dir_opt} ${link_opt}
 
-	mkdir -p \
-		${dir_resource} \
-		${dir_ap_version} \
-		${dir_md_version} \
-		${dir_ap_rsync} \
-		${dir_md_rsync} \
-		${dir_opt_data_gps} \
-		${dir_opt_data_3g} \
-		${dir_opt_log_gps} \
-		${dir_opt_log_usr} \
-		${dir_opt_log_nginx_error} \
-		${dir_opt_log_nginx_access} \
-		${dir_opt_log_phpfpm_error} \
-		${dir_opt_log_auth} \
-		${dir_opt_log_sys_md_init} \
-		${dir_opt_log_sys_md_klog} \
-		${dir_opt_log_sys_md_ulog} \
-		${dir_opt_log_sys_ap_init} \
-		${dir_opt_log_sys_ap_klog} \
-		${dir_opt_log_sys_ap_ulog} \
-		${dir_opt_conf}
-
 	local now=$(getnow)
+	local file=${dir_opt_log_sys_md_init}/${now}
 	#
 	# save md init info
 	#
-	dmesg > ${dir_opt_log_sys_md_init}/${now}
+	dmesg > ${file}; fsync ${file}
+
 	#
-	# save last syslog
+	# save md syslog
 	#
-	local ulog=${dir_opt_log_sys_md_ulog}/messages
-	if [ -f "${ulog}" ]; then
-		mv ${ulog} ${dir_opt_log_sys_md_ulog}/${now}
-	fi
+	file=${dir_opt_log_sys_md_ulog}/${now}; touch ${file}
+	#
+	# for readsyslog
+	#
+	LN_FILE ${file} ${file_md_ulog}
 	#
 	# start syslogd, log at rootfs_data
 	#	Max size (1024KB) before rotate
 	#
-	syslogd -s 1024 -O ${dir_opt_log_sys_md_ulog}/messages
+	syslogd -s 1024 -O ${file}
 	#
 	# todo: how to save /proc/kmsg
 	#
@@ -660,6 +707,19 @@ umount_all() {
 	umount_others
 
 	umount_self
+}
+
+#
+# plt dir
+#
+readonly dir_plt_syslog=${dir_plt}/syslog
+
+setup_dir_plt() {
+	local dir
+
+	for dir in ${!dir_plt_*}; do
+		mkdir -p ${!dir}
+	done
 }
 
 #
@@ -708,21 +768,19 @@ opt2tftp() {
 }
 
 setup_dir_tftp() {
-	local i
-	local opt
-	local tmp
+	local dir
 
-	mkdir -p ${dir_tftp_version}
+	for dir in ${!dir_tftp_*}; do
+		mkdir -p ${!dir}
+	done
 
 	#
 	# /tmp/tftp and /opt have same sub dir
 	#
 	#	/opt is softlink, so must end with /
 	#
-	for opt in $(find /opt/ -type d); do
-		tmp=$(opt2tftp ${opt})
-
-		mkdir -p ${tmp}
+	for dir in $(find /opt/ -type d); do
+		mkdir -p $(opt2tftp ${dir})
 	done
 
 	#
@@ -753,6 +811,7 @@ setup_dir_status() {
 }
 
 setup_dir() {
+	setup_dir_plt
 	setup_dir_tftp
 	setup_dir_status
 }

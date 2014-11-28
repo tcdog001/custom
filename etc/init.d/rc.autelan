@@ -52,30 +52,19 @@ main() {
 	/bin/dnsmasq & 2>/dev/null
 	
 	/usr/sbin/crond -c /etc/crontabs/
-	. /etc/getlastSuccessTime &
-	#acc-poweroff.log
-	if [ -e /data/acc_off.txt ];then
-        	rm -rf /data/acc_off.txt;
-	else
-	{
-        	line=` grep -n "" /data/startime |wc -l `
-        	line2=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
-        	if [ $line -gt 2 ];then
-                	sed -e "1,$line2"d /data/startime -i 2>/dev/null
-        	fi
-		
-		dmac=`cat /data/ap_mac`
-	       	startime=` cat /data/startime |sed -n '1p' `
-        	lastSuccessTime=`cat /data/lastSuccessTime`
-        	echo "{\"dmac\":\"$dmac\",\"startime\":\"$startime\",\"lastSuccessTime:\"$lastSuccessTime\",\"sign\":\"DROP-OFF\"}" >/opt/log/sys/md/power_off.log
-	}
-	fi
 
-	/usr/localweb/.compare_disk.sh
+	#check the last time drop reason
+	. /etc/drop_off.sh
+	. /etc/get_time.sh &
+	
+#	/usr/localweb/.compare_disk.sh &
 
 	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
 	/etc/jsock/jsock_init.sh
+	/usr/sbin/sync_3gstatus_MD.sh &
+
+	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
 
 	#
 	# keep it last !!!

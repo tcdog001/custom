@@ -10,10 +10,16 @@ COOKIE_FILE=/tmp/registerCookie.txt
 PAGE=lteRegister.do
 RESULT_FILE=/tmp/registerResult.txt
 CURLE_COULDNT_CONNECT=7
+CURLE_COULDNT_RESOLVE_HOST=6
 RECONNECTION_INTERVAL=5
 if [ -f $RESULT_FILE ];then
 	rm $RESULT_FILE
 fi
+
+while [ ! -f $FILE_REGISTER ]; do
+	sleep 5
+done
+
 if [ -f $FILE_REGISTER ];then
 	if [ -s $URL_PATH ];then
 		url_path=`cat $URL_PATH |jq -j '.url'`
@@ -28,7 +34,7 @@ if [ -f $FILE_REGISTER ];then
 		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d @$FILE_REGISTER -s  -c $COOKIE_FILE  $url > $RESULT_FILE
 		response=$?
 		echo response=$response
-		if [ $response -eq $CURLE_COULDNT_CONNECT ];then
+		if [ $response -eq $CURLE_COULDNT_CONNECT ] || [ $response -eq $CURLE_COULDNT_RESOLVE_HOST ];then
 			sleep $RECONNECTION_INTERVAL
 		else
 			break
@@ -54,3 +60,5 @@ if [ -f $FILE_REGISTER ];then
 else
 	echo $FILE_REGISTER" is not exist!"
 fi
+
+

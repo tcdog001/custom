@@ -21,7 +21,6 @@ main() {
 	jmsg_logger "get media json:${json}"
 
 	sed -i 's/}/,'"${json}"'}/g' ${file_register}
-	${__ROOTFS__}/etc/platform/bin/register.sh &
 }
 
 main "$@"

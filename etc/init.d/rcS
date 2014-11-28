@@ -42,5 +42,6 @@ done
 #
 # autelan init
 #
-/etc/init.d/rc.autelan &
+#/etc/init.d/rc.autelan &
+/etc/init.d/rc.autelan
 

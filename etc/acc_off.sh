@@ -2,29 +2,30 @@
 
 . /etc/platform/bin/platform.in
 
-/usr/sbin/sysled sata off
-/usr/sbin/sysled sys off
+get_onoff_log() {
+	local file_path=/opt/log/onoff
+	local ontime_file=/data/md-on
+	local ontime=$( cat ${ontime_file} |sed -n '$p' )
+	local offtime=$(date '+%F-%H:%M:%S')
+	local line=$( grep -n "" ${ontime_file} |wc -l )
+	local del_line=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
 
-kill -9 wget 2>/dev/null
-kill -9 rsync 2>/dev/null
+	if [[ ${line} -gt 2 ]];then
+		sed -e "1,${del_line}"d ${ontime_file} -i 2>/dev/null
+	fi
+	echo "{\"ontime\":\"${ontime}\",\"offtime:\"${offtime}\",\"offreason\":\"ACC-OFF\"}" >${file_path}/on-off-${offtime}
+}
+main() {
+	/usr/sbin/sysled sata off                                         
+	/usr/sbin/sysled sys off                                                  
+                                                                          
+	kill -9 wget 2>/dev/null                                                  
+	kill -9 rsync 2>/dev/null
+	
+	get_onoff_log
+	sync
+	sleep 15
+	sysreboot
+}
 
-MAC=$(cat $FILE_REGISTER |awk -F ',' '{print $4}' |awk -F '"' '{print $4}' |sed 's/:/-/g') 2>/dev/null
-if [ ! -z $MAC ];then
-	echo $MAC >/mnt/flash/rootfs_data/ap_mac
-fi
-
-line=` grep -n "" /data/startime |wc -l `
-line2=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
-if [ $line -gt 2 ];then
-	sed -e "1,$line2"d /data/startime -i 2>/dev/null
-fi
-
-dmac=`cat /data/ap_mac`
-startime=` cat /data/startime |sed -n '$p' `
-offtime=`date`
-echo "{\"dmac\":\"$dmac\",\"startime\":\"$startime\",\"offtime:\"$offtime\",\"sign\":\"ACC-OFF\"}" >/opt/log/sys/md/power_off.log
-
-sync
-
-sleep 15
-sysreboot
+main "$@"

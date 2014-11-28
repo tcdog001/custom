@@ -7,4 +7,5 @@ else
 fi
 
 readonly FILE_REGISTER=/tmp/.register.json
+readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
 

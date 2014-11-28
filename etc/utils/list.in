@@ -24,3 +24,14 @@ in_list_check() {
 
 	return ${e_inval}
 }
+
+get_list_first() {
+	echo "$1"
+}
+
+get_list_tail() {
+	shift;
+
+	echo "$@"
+}
+
