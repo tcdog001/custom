@@ -110,9 +110,9 @@ get_device_info() {
 #functions[device.info]=get_device_info
 
 get_car_system_log() {
-	do_nothing
+	get_private_log ${dir_opt_log_dev_monitor} car_system.log
 }
-#functions[car_system.log]=get_car_system_log
+functions[car_system.log]=get_car_system_log
 
 get_vcc_quality_log() {
 	get_private_log ${dir_opt_log_vcc} vcc-quality.log
@@ -202,7 +202,8 @@ create_file() {
 }
 
 get_mac() {
-	local mac=$(cat ${FILE_REGISTER} | jq -j '.mac|strings' | tr  ":" "-")
+	#local mac=$(cat ${FILE_REGISTER} | jq -j '.mac|strings' | tr  ":" "-")
+	local mac=$(cat /data/ap-mac)
 
 	if [[ -z "${mac}" ]]; then
 		return 1
