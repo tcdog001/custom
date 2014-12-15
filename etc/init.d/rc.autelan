@@ -63,13 +63,14 @@ main() {
 
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
+	/usr/sbin/auto_reboot_md.sh &
 
-	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
-
+        echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+        
 	#
-	# keep it last !!!
-	#
-	/etc/upgrade/rootfs_init.sh &
+        # keep it last !!!
+        #
+        /etc/upgrade/rootfs_init.sh &
 }
 
 main "$@"
