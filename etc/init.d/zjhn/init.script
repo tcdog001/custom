@@ -1,0 +1,37 @@
+#!/bin/bash
+
+. /etc/upgrade/dir.in
+
+log() {
+	echo_logger zjhn_init "$@"
+}
+
+main() {
+	local mac=${__CP_DEVMAC__}
+	local err=0
+	local url
+
+	url="http://data.9797168.com:8080/update/get_switch"
+	local upload=$(curl -d mac=".${mac}." ${url}); err=$?
+	if ((0!=err)); then
+		log "ERROR[${err}]: ${url}"
+		return ${err}
+	elif ((1!=upload)); then
+		log "needn't upload: ${url}"
+		return
+	fi
+
+	url="http://data.9797168.com:8080/update/post_file"
+	local file=/tmp/du.list
+	local tarfile=/tmp/du_${mac}.tar.gz
+	pushd ${dir_website} &> /dev/null
+	du > ${file}
+	tar -zcvf ${tarfile} ${file}
+	curl -F upload=@${tarfile} -F mac=${mac} ${url}; err=$?
+	if ((0!=err)); then
+		log "ERROR[${err}]: ${url}"
+		return ${err}
+	fi
+}
+
+main "$@"

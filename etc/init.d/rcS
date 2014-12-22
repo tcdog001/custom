@@ -12,11 +12,7 @@ echo "
 "
 echo "version $(cat /etc/.version)"
 
-TZ=UTC-8
-export TZ
-
-PEER=1.0.0.5
-export PEER
+. /etc/env.in
 
 # Mount fs accroding to /etc/fstab 
 mount -a

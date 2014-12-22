@@ -32,6 +32,16 @@ readonly dir_website_config=${dir_hd}/website_config
 readonly file_website_config=${dir_website_config}/website.conf
 
 #
+# for third-part(custom dir)
+#
+readonly dir_cp=${dir_hd}/${__CP__}
+readonly dir_cp_script=${dir_cp}/script
+readonly link_cp=${__CP_HOME__}
+readonly file_cp_init=${dir_cp_script}/init.sh
+readonly file_cp_env=${dir_cp_script}/env.sh
+readonly dir_tmp_cp=tmp/${__CP__}
+
+#
 # usb dir
 #
 readonly dir_usb_upgrade=${dir_usb}/upgrade
@@ -348,9 +358,14 @@ mount_hd() {
 	if [ -d "${dir_website}" ]; then
 		chmod -R 777 ${dir_website}
 	fi
-	mkdir -p ${dir_website_upgrade} ${dir_website_config}
 
 	LN_DIR ${dir_hd} ${link_hd}
+
+	mkdir -p \
+		${dir_website_upgrade} \
+		${dir_website_config} \
+		${dir_cp_script} \
+		${dir_tmp_cp}
 }
 
 umount_hd() {
@@ -637,7 +652,10 @@ mount_rootfs_data() {
 	# link /mnt/flash/rootfs_data to /data
 	#
 	LN_DIR ${dir_rootfs_data} ${link_rootfs_data}
-
+	#
+	# link /mnt/hd/zjhn to /data/zjhn
+	#
+	LN_DIR ${dir_cp} ${link_cp}
 	#
 	# link /mnt/flash/rootfs_data/opt to /opt
 	#

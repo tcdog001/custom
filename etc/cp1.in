@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export __CP__=zjhn
+export __CP_HOME__=/data/${__CP__}
+export __CP_SCRIPT__=${__CP_HOME__}/script
+export __CP_TEMP__=/tmp/${__CP__}
+export __CP_WEBSITE__=/mnt/hd/website
+

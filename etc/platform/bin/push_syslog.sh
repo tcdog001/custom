@@ -202,8 +202,7 @@ create_file() {
 }
 
 get_mac() {
-	#local mac=$(cat ${FILE_REGISTER} | jq -j '.mac|strings' | tr  ":" "-")
-	local mac=$(cat /data/ap-mac)
+	local mac=$(cat ${FILE_REGISTER} | jq -j '.mac|strings' | tr  ":" "-")
 
 	if [[ -z "${mac}" ]]; then
 		return 1

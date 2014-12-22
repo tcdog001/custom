@@ -6,6 +6,6 @@ else
 	__PLATFORM_BIN_PLATFORM_IN__="$0"
 fi
 
-readonly FILE_REGISTER=/tmp/.register.json
+readonly FILE_REGISTER=/data/.register.json
 readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
 

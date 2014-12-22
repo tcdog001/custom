@@ -5,11 +5,9 @@
 PATH="/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/sbin:/etc/platform/bin"
 export PATH
 
-TZ=UTC-8
-export TZ
-
-PEER=1.0.0.5
-export PEER
+. /etc/env.in
+. /etc/cp1.in
+. /etc/cp2.in
 
 ulimit -c 0
 

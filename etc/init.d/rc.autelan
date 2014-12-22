@@ -1,15 +1,10 @@
 #!/bin/bash
 
-TZ=UTC-8
-export TZ
-
-PEER=1.0.0.5
-export PEER
-
 main() {
 	clock_set
-
+	. /etc/cp1.in	
 	/etc/upgrade/mount_all.sh
+	. /etc/cp2.in
 
 	ifconfig lo up
 	#
@@ -64,6 +59,12 @@ main() {
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
 	/usr/sbin/auto_reboot_md.sh &
+	#
+	# try start cp's init
+	#
+	if [[ -n "${__CP_DEVMAC__}" ]]; then
+		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
+	fi
 
         echo $(date '+%F-%H-%M-%S') > /tmp/.startup
         
