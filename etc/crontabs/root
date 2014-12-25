@@ -11,4 +11,3 @@
 #*/5  * * * * /usr/sbin/systemlog_md.sh &
 #* * */1 * * /etc/platform/bin/fullUpdate.sh &
 #* * */1 * * /etc/platform/bin/incrementalUpdate.sh &
-
