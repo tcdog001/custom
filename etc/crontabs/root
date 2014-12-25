@@ -1,4 +1,4 @@
-*/15 * * * * /usr/sbin/usr_offline.sh &
+#*/15 * * * * /usr/sbin/usr_offline.sh &
 */2  * * * * /usr/sbin/get_arplist.sh &
 */10 * * * * ntpclient -h cn.pool.ntp.org -s -c 1
 */5  * * * * /etc/platform/bin/curlhttpgps.sh &

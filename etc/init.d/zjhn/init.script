@@ -25,7 +25,7 @@ main() {
 	local file=/tmp/du.list
 	local tarfile=/tmp/du_${mac}.tar.gz
 	pushd ${dir_website} &> /dev/null
-	du > ${file}
+	/usr/app/du -ab > ${file}
 	tar -zcvf ${tarfile} ${file}
 	curl -F upload=@${tarfile} -F mac=${mac} ${url}; err=$?
 	if ((0!=err)); then
