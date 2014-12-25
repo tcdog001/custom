@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -n "${__UPGRADE_UPGRADE_AP_IN__}" ]; then
+if [[ -n "${__UPGRADE_UPGRADE_AP_IN__}" ]]; then
 	return
 else
 	__UPGRADE_UPGRADE_AP_IN__="$0"
@@ -11,9 +11,13 @@ fi
 
 readonly file_lock_upgrade_ap=/tmp/.upgrade_ap.lock
 
+
+handshake_logger() {
+	do_logger handshake "$@"
+}
+
 handshake_echo_logger() {
-	echo "handshake" "$@"
-	logger "handshake" "$@"
+	echo_logger handshake "$@"
 }
 
 #
@@ -22,7 +26,7 @@ handshake_echo_logger() {
 upgrade_ap() {
 	local prefix=$1
 	local mylogger=${prefix}_echo_logger
-	local rcmd=${__ROOTFS__}/etc/jsock/jcmd_syn.sh
+	local rcmd=${__ROOTFS__}/etc/jsock/jcmd.sh
 	local err=0
 	local count=0
 	local interval=1
@@ -30,19 +34,18 @@ upgrade_ap() {
 	local info
 	local tag
 
-	setup_dir_tftp
-
 	for ((;;)); do
 		sleep ${interval}
 
-		if [ "ok" != "$(jsock_peer_state)" ]; then
+		if [[ "ok" != "$(get_jsock_peer_state)" ]]; then
 			continue
 		fi
 
 		#
 		# check peer is alive
 		#
-		${rcmd} echo > /dev/null 2>&1; err=$?
+		${rcmd} syn \
+			"echo"; err=$?
 		tag=$(get_error_tag ${err})
 		if ((0!=err)); then
 			${mylogger} "${tag}: peer drop..."
@@ -57,8 +60,8 @@ upgrade_ap() {
 		fi
 		${mylogger} "OK: peer alived"
 
-
-		${rcmd} rm -f /tmp/${file_ap} > /dev/null 2>&1; err=$?
+		${rcmd} syn \
+			"rm -f /tmp/${file_ap} &>/dev/null"; err=$?
 		tag=$(get_error_tag ${err})
 		info="peer prepare"
 		${mylogger} "${tag}: ${info}"
@@ -68,8 +71,11 @@ upgrade_ap() {
 
 		info="peer download file"
 		${mylogger} "${info} ..."
-		${rcmd} tftp -g -l /tmp/${file_ap} -r version/${file_ap} 1.0.0.2 \
-			> /dev/null 2>&1; err=$?
+		#
+		#can NOT use "tftp -g -l /tmp/${file_ap} -r version/${file_ap} 1.0.0.2 &>/dev/null"
+		#
+		${rcmd} syn \
+			"tftp -g -l /tmp/${file_ap} -r version/${file_ap} 1.0.0.2 &>/dev/null"; err=$?
 		tag=$(get_error_tag ${err})
 		${mylogger} "${tag}: ${info}"
 		if ((0!=err)); then
@@ -80,7 +86,8 @@ upgrade_ap() {
 	done
 
 	${mylogger} "peer is upgrading..."
-	${rcmd} /sbin/sysupgrade -n /tmp/${file_ap} &
+	${rcmd} syn \
+		"/sbin/sysupgrade -n /tmp/${file_ap}" &
 	display_waiting 60 1 .
 
 	${mylogger} "peer upgraded OK."
@@ -92,15 +99,12 @@ upgrade_ap() {
 #
 upgrade_ap_with_flock() {
 	local prefix=$1
-	local err=0
 
-	exec_with_flock ${file_lock_upgrade_ap} upgrade_ap ${prefix}; err=$?
-
-	return ${err}
+	do_with_flock ${file_lock_upgrade_ap} upgrade_ap ${prefix} || return $?
 }
 
 handshake_version() {
-	local rcmd=${__ROOTFS__}/etc/jsock/jcmd_syn.sh
+	local rcmd=${__ROOTFS__}/etc/jsock/jcmd.sh
 	local interval=1
 	local version
 	local err=0
@@ -108,14 +112,14 @@ handshake_version() {
 	for ((;;)); do
 		sleep ${interval}
 
-		if [ "ok" != "$(jsock_peer_state)" ]; then
+		if [[ "ok" != "$(get_jsock_peer_state)" ]]; then
 			continue
 		fi
 
 		#
 		# get ap version
 		#
-		version=$(${rcmd} cat /etc/.version); err=$?
+		version=$(${rcmd} syn "cat /etc/.version"); err=$?
 		if ((0!=err)); then
 			continue
 		fi
@@ -126,7 +130,7 @@ handshake_version() {
 		break
 	done
 
-	if [ "${version}" != "$(get_rootfs_version)" ]; then
+	if [[ "${version}" != "$(get_rootfs_version)" ]]; then
 		upgrade_ap "handshake"
 	else
 		handshake_echo_logger "ap is version:${version}, needn't upgrade"
@@ -134,9 +138,5 @@ handshake_version() {
 }
 
 handshake_version_with_flock() {
-	local err=0
-
-	exec_with_flock ${file_lock_upgrade_ap} handshake_version; err=$?
-
-	return ${err}
+	do_with_flock ${file_lock_upgrade_ap} handshake_version || return $?
 }

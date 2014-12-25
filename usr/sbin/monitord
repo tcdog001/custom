@@ -8,7 +8,7 @@ readonly file_lock_monitord=/tmp/.monitord.lock
 monitor() {
 	local path=$1
 
-	if [ -z "${path}" ]; then
+	if [[ -z "${path}" ]]; then
 		path=${__ROOTFS__}/etc/monitord.d
 	fi
 
@@ -20,9 +20,9 @@ monitor() {
 		sleep ${interval}
 
 		for task in ${list}; do
-			local app="$(cat ${path}/${task})"
+			local app=$(< ${path}/${task})
 
-			if [ -z "${app}" ]; then
+			if [[ -z "${app}" ]]; then
 				app=${task}
 			fi
 
@@ -35,7 +35,7 @@ main() {
 	local path=$1
 
 	monitor ${path}
-#	exec_with_flock ${file_lock_monitord} monitor_all ${path}
+#	do_with_flock ${file_lock_monitord} monitor_all ${path}
 }
 
 main "$@"

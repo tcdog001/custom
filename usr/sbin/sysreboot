@@ -8,7 +8,7 @@
 main() {
 	local after="$1"
 
-	if [ -z "${after}" ]; then
+	if [[ -z "${after}" ]]; then
 		after=3
 	fi
 

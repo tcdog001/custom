@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -n "${__UPGRADE_DIR_IN__}" ]; then
+if [[ -n "${__UPGRADE_DIR_IN__}" ]]; then
 	return
 else
 	__UPGRADE_DIR_IN__="$0"
@@ -16,117 +16,6 @@ readonly file_kernel=hi_kernel.bin
 readonly file_pqparam=pq_param_hi3718cv100.bin
 
 #
-# base dir
-#
-readonly dir_flash=/mnt/flash
-readonly dir_sd=/mnt/sd
-readonly dir_hd=/mnt/hd
-readonly dir_usb=/mnt/usb
-readonly dir_tftp=/tmp/tftp
-readonly dir_status=/tmp/status
-readonly dir_plt=/tmp/platform
-readonly dir_website=${dir_hd}/website
-readonly dir_website_upgrade=${dir_hd}/website_upgrade
-readonly dir_website_config=${dir_hd}/website_config
-
-readonly file_website_config=${dir_website_config}/website.conf
-
-#
-# for third-part(custom dir)
-#
-readonly dir_cp=${dir_hd}/${__CP__}
-readonly dir_cp_script=${dir_cp}/script
-readonly link_cp=${__CP_HOME__}
-readonly file_cp_init=${dir_cp_script}/init.sh
-readonly file_cp_env=${dir_cp_script}/env.sh
-readonly dir_tmp_cp=tmp/${__CP__}
-
-#
-# usb dir
-#
-readonly dir_usb_upgrade=${dir_usb}/upgrade
-readonly dir_usb_upgrade_rootfs=${dir_usb_upgrade}/rootfs
-readonly dir_usb_upgrade_rootfs_data=${dir_usb_upgrade}/rootfs_data
-readonly dir_usb_upgrade_website=${dir_usb_upgrade}/website
-
-
-#
-# partition dir
-#
-readonly dir_rootfs=${dir_flash}/rootfs
-readonly dir_rootfs0=${dir_flash}/rootfs0
-readonly dir_rootfs1=${dir_flash}/rootfs1
-readonly dir_rootfs2=${dir_flash}/rootfs2
-readonly dir_rootfs_data=${dir_flash}/rootfs_data
-
-#
-# get current rootfs's idx
-#
-rootfs_current() {
-	local self=$(cat /proc/cmdline | sed 's# #\n#g' | grep root= | awk -F '=' '{print $2}')
-	local i
-
-	for ((i=0; i<=2; i++)); do
-		local dev=dev_rootfs${i}
-
-		if [ "${!dev}" == "${self}" ]; then
-			echo "${i}"
-
-			return
-		fi
-	done
-
-	echo "0"
-	return ${e_noexist}
-}
-
-#
-# get buddy rootfs's idx
-#[$1:idx]
-#
-# rootfs_buddy ==> rootfs_current's buddy
-# rootfs_buddy 1 ==> rootfs1's buddy ==>2
-# rootfs_buddy 2 ==> rootfs2's buddy ==>1
-#
-rootfs_buddy() {
-	local idx=$1
-
-	if [ -z "${idx}" ]; then
-		idx="$(rootfs_current)"
-	fi
-
-	case "${idx}" in
-	"0")
-		echo "1"
-		return ${e_inval}
-		;;
-	"1")
-		echo "2"
-		;;
-	"2")
-		echo "1"
-		;;
-	*)
-		echo "1"
-		return ${e_inval}
-		;;
-	esac
-}
-
-#
-#$1:idx
-#
-rootfs_dir() {
-	local idx="$1"
-
-	echo "${dir_rootfs}${idx}"
-}
-
-rootfs_buddy_dir() {
-	echo "$(rootfs_dir $(rootfs_buddy))"
-}
-
-#
 #$1:min_size
 #$2:max_size
 #
@@ -134,17 +23,14 @@ get_dev_bysize() {
 	local min_size=$1
 	local max_size=$2
 
-	local a
-	local b
-	local size
-	local name
-	cat /proc/partitions | grep sd[a-z]1 | while read a b size name; do
+	local a b size name
+	while read a b size name; do
 		if ((size>=min_size && size<=max_size)); then
 			echo "/dev/${name}"
 
 			return
 		fi
-	done
+	done < <(grep sd[a-z]1 /proc/partitions)
 }
 
 #
@@ -158,7 +44,7 @@ get_dev_bydeft() {
 	local max_size=$3
 
 	local dev=$(get_dev_bysize ${min_size} ${max_size})
-	if [ -n "${dev}" ]; then
+	if [[ -n "${dev}" ]]; then
 		echo ${dev}
 	else
 		echo ${dev_deft}
@@ -189,7 +75,6 @@ get_dev_usb() {
 }
 dev_usb=$(get_dev_usb)
 
-
 readonly dev_sd=/dev/mmcblk1p1
 
 #
@@ -200,31 +85,173 @@ readonly dev_rootfs1=/dev/mmcblk0p8
 readonly dev_rootfs2=/dev/mmcblk0p9
 readonly dev_rootfs_data=/dev/mmcblk0p10
 
-declare -A dev_emmc_bin=( \
-	[fastboot-burn.bin]=/dev/mmcblk0p1 \
-	[pq_param_hi3718cv100.bin]=/dev/mmcblk0p4 \
-	[hi_kernel.bin]=/dev/mmcblk0p6 \
+readonly -A dev_emmc_bin=(
+	[fastboot-burn.bin]=/dev/mmcblk0p1
+	[pq_param_hi3718cv100.bin]=/dev/mmcblk0p4
+	[hi_kernel.bin]=/dev/mmcblk0p6
 )
 
-readonly link_hd=/hd
-readonly link_sd=/sd
-readonly link_usb=/usb
-readonly link_rootfs0=/rootfs0
-readonly link_rootfs1=/rootfs1
-readonly link_rootfs2=/rootfs2
-readonly link_buddy=/buddy
-readonly link_rootfs_data=/data
-readonly link_opt=/opt
+readonly -A DEV_ROOTFS=(
+	["/dev/mmcblk0p7"]=0
+	["/dev/mmcblk0p8"]=1
+	["/dev/mmcblk0p9"]=2
+)
 
-readonly mount_retry_delay=1
+#
+# base dir
+#
+readonly dir_flash=/mnt/flash
+readonly dir_sd=/mnt/sd
+readonly dir_hd=/mnt/hd
+readonly dir_usb=/mnt/usb
+readonly dir_tftp=/tmp/tftp
+readonly dir_status=/tmp/status
+readonly dir_plt=/tmp/plt
+readonly dir_plt_syslog=${dir_plt}/syslog
+readonly dir_website=${dir_hd}/website
+readonly dir_website_upgrade=${dir_hd}/website_upgrade
+readonly dir_website_config=${dir_hd}/website_config
+#
+# for third-part(custom dir)
+#
+readonly dir_custom=${dir_hd}/custom
+readonly dir_custom_zjhn=${dir_custom}/zjhn
+readonly dir_custom_script=${dir_custom_zjhn}/script
+readonly file_custom_init=${dir_custom_script}/init.sh
+
+readonly dir_tmp_custom=tmp/custom
+readonly dir_tmp_custom_zjhn=${dir_tmp_custom}/zjhn
+
+readonly file_plt_cache=${dir_plt}/.plt.cache
+readonly file_website_config=${dir_website_config}/website.conf
+
+readonly file_status_3g=${dir_status}/3g
+readonly file_status_5g=${dir_status}/5g
+
+readonly LINK_UP=up
+readonly LINK_DOWN=down
+
+init_dir_status() {
+	set_file_value ${file_status_3g} ${LINK_DOWN}
+	set_file_value ${file_status_5g} ${LINK_DOWN}
+}
+
+#
+# usb dir
+#
+readonly dir_usb_upgrade=${dir_usb}/upgrade
+readonly dir_usb_upgrade_rootfs=${dir_usb_upgrade}/rootfs
+readonly dir_usb_upgrade_rootfs_data=${dir_usb_upgrade}/rootfs_data
+readonly dir_usb_upgrade_website=${dir_usb_upgrade}/website
+
+#
+# partition dir
+#
+readonly dir_rootfs0=${dir_flash}/rootfs0
+readonly dir_rootfs1=${dir_flash}/rootfs1
+readonly dir_rootfs2=${dir_flash}/rootfs2
+readonly dir_rootfs_data=${dir_flash}/rootfs_data
+
+#
+#$1:idx
+#
+rootfs_dir() {
+	local idx="$1"
+	local dir=dir_rootfs${idx}
+
+	echo "${!dir}"
+}
+
+readonly file_rootfs_current=/tmp/.rootfs_current
+#
+# get current rootfs's idx
+#
+rootfs_current() {
+	#
+	# get from cache
+	#
+	local idx=$(getfilevalue ${file_rootfs_current} "")
+	if [[ -n "${idx}" ]]; then
+		echo ${idx}
+
+		return
+	fi
+
+	#
+	# get from /proc/cmdline
+	#
+	local dev_name=$(cat /proc/cmdline | sed 's# #\n#g' | grep root= | awk -F '=' '{print $2}')
+	idx=${DEV_ROOTFS[${dev_name}]}
+	if [[ -z "${dev_name}" || -z "${idx}" ]]; then
+		#
+		# error, bad cmdline
+		#
+		echo 0
+
+		return ${e_noexist}
+	else
+		#
+		# save to cache
+		#
+		echo ${idx}
+
+		set_file_value ${file_rootfs_current} ${idx}
+	fi
+}
+
+#
+# get buddy rootfs's idx
+#[$1:idx]
+#
+# rootfs_buddy ==> rootfs_current's buddy
+# rootfs_buddy 1 ==> rootfs1's buddy ==>2
+# rootfs_buddy 2 ==> rootfs2's buddy ==>1
+#
+rootfs_buddy() {
+	local idx=$1; idx=${idx:-$(rootfs_current)}
+
+	case ${idx} in
+	0)
+		echo 1
+
+		return ${e_inval}
+		;;
+	1)
+		echo 2
+		;;
+	2)
+		echo 1
+		;;
+	*)
+		echo 1
+
+		return ${e_inval}
+		;;
+	esac
+}
+
+#
+#don't remove it
+#
+#readonly link_hd=/hd
+#readonly link_sd=/sd
+#readonly link_usb=/usb
+#readonly link_rootfs0=/rootfs0
+#readonly link_rootfs1=/rootfs1
+#readonly link_rootfs2=/rootfs2
+#readonly link_buddy=/buddy
+#readonly link_rootfs_data=/data
+
+readonly delay_mount_retry=1
 
 #
 #$1:dev
 #
 mount_check() {
 	local dev=$1
+	local name=$(basename ${dev})
 
-	if [ -z "$(cat /proc/partitions | grep $(basename ${dev}))" ]; then
+	if [[ -z "$(cat /proc/partitions | grep ${name})" ]]; then
 		#
 		# if dev no exist, exit
 		#
@@ -242,211 +269,238 @@ mount_check() {
 #
 #$1:dev name
 #$2:dir name
+#
+do_mkfs() {
+	local dev="$1"
+	local dir="$2"
+
+	do_with_cb echo_logger "mkfs" \
+		"mkfs.ext4 ${dev}" || return $?
+}
+
+#
+#$1:dev name
+#$2:dir name
+#[$3:opt]
+#
+do_mount_one() {
+	local dev="$1"
+	local dir="$2"; shift 2
+	local opt="$*"
+	local opt_fixed="-t ext4 -o noatime,nodiratime"
+
+	mount_check ${dev} || return $?
+
+	do_with_cb echo_logger "mount" \
+		"mount ${opt} ${opt_fixed} ${dev} ${dir}" || return $?
+}
+
+#
+#$1:dev name
+#$2:dir name
 #$3:retry times
-#$4:auto mkfs
-#[$5:option]
+#[$4:option]
 #
 do_mount() {
 	local dev="$1"
 	local dir="$2"
-	local retry="$3"
-	local mkfs="$4"
-	local option="$5"
-	local opt="-t ext4 -o noatime -o nodiratime"
-	mkdir -p ${dir}
-
-	mount_check ${dev} || {
-		return ${e_noexist}
-	}
+	local retry="$3"; shift 3
+	local opt="$*"
 
 	local err=0
 	local times=0
-	local action="mount ${opt} ${option} ${dev} ${dir}"
-	while ((times < retry)); do
-		((times++))
-		mount ${opt} ${option} ${dev} ${dir}; err=$?
-		if [ "0" == "${err}" ]; then
-			echo_logger "mount" "OK: ${action}"
-
+	for ((; times < retry; times++)); do
+		do_mount_one ${dev} ${dir} ${opt}; err=$?
+		if ((0==err)); then
 			return
-		else
-			echo_logger "mount times:${times}" "ERR[${err}]: ${action}"
 		fi
 
-		sleep ${mount_retry_delay}
+		sleep ${delay_mount_retry}
 	done
-
-	if [[ "0" != "${err}" && "yes" == "${mkfs}" ]]; then
-		mkfs.ext4 ${dev}; err=$?
-		if [ "0" != "${err}" ]; then
-			echo_logger "mkfs" "ERR[${err}]: mkfs.ext4 ${dev}"
-
-			return ${e_mkfs_failed}
-		else
-			echo_logger "mkfs" "OK: mkfs.ext4 ${dev}"
-		fi
-
-		mount ${opt} ${option} ${dev} ${dir}; err=$?
-		if [ "0" != "${err}" ]; then
-			echo_logger "mount" "ERR[${err}]: ${action}"
-
-			return ${e_mount_failed}
-		else
-			echo_logger "mount" "OK: ${action}"
-		fi
-	fi
 
 	return ${err}
 }
 
 #
-#$1:dev name
+#$1:dev/dir
 #
 do_umount() {
 	local dev="$1"
-	local err=0;
 
-	if [ -z "$(cat /proc/partitions | grep $(basename ${dev}))" ]; then
+	if [[ -z "$(cat /proc/partitions | grep $(basename ${dev}))" ]]; then
 		return
-	elif [ -z "$(mount | grep ${dev})" ]; then
+	elif [[ -z "$(mount | grep ${dev})" ]]; then
 		return
-	fi
-
-	umount -r ${dev}; err=$?
-	if [ "0" == "${err}" ]; then
-		echo_logger "umount" \
-			"OK: umount ${dev}"
 	else
-		echo_logger "umount" \
-			"ERR[${err}]: umount ${dev}"
-
-		return ${err}
+		do_with_cb :logger "umount" \
+			"umount -r ${dev}" || return $?
 	fi
 }
 
-readonly file_product_test=product_test.sh
+init_dev_sd() {
+	local ptest=${dir_sd}/product_test.sh
+	if [[ -x "${ptest}" ]]; then
+		echo_logger "mount" \
+			"found and exec ${ptest}"
+
+		${ptest}
+	fi
+}
 
 mount_sd() {
-	do_mount ${dev_sd} ${dir_sd} 5 "no"
+	do_mount ${dev_sd} ${dir_sd} 3
 
-	#
-	# for app use /sd/xxx
-	#
-	LN_DIR ${dir_sd} ${link_sd}
-
-	if [ -x "${dir_sd}/${file_product_test}" ]; then
-		echo_logger "mount" \
-			"found and exec ${file_product_test}"
-
-		${dir_sd}/${file_product_test}
-	fi
+	init_dev_sd
 }
 
 umount_sd() {
-	rm -f ${link_sd}
-
-	sync
-
 	do_umount ${dev_sd}
 }
 
-mount_hd() {
-	do_mount ${dev_hd} ${dir_hd} 5 "no" && {
-		usr/sbin/sysled sata on
-	}
-
-	if [ -d "${dir_website}" ]; then
+init_dev_hd() {
+	if [[ -d "${dir_website}" ]]; then
 		chmod -R 777 ${dir_website}
 	fi
 
-	LN_DIR ${dir_hd} ${link_hd}
+	setup_dir_with_prefix dir_ ${dir_hd}
 
-	mkdir -p \
-		${dir_website_upgrade} \
-		${dir_website_config} \
-		${dir_cp_script} \
-		${dir_tmp_cp}
+	usr/sbin/sysled sata on
+}
+
+mount_hd() {
+	do_mount ${dev_hd} ${dir_hd} 5 || return $?
+
+	init_dev_hd
 }
 
 umount_hd() {
-	rm -f ${link_hd}
-
-	sync
-
 	do_umount ${dev_hd}
 }
 
-mount_usb() {
-	do_mount ${dev_usb} ${dir_usb} 5 "no"
+init_dev_usb() {
+	do_nothing
+}
 
-	LN_DIR ${dir_usb} ${link_usb}
+mount_usb() {
+	do_mount ${dev_usb} ${dir_usb} 3
+
+	init_dev_usb
 }
 
 umount_usb() {
-	rm -f ${link_usb}
-
-	sync
-
 	do_umount ${dev_usb}
+}
+
+
+#
+#$1:dir/dev
+#$2:ro|rw
+#
+do_remount() {
+	local dir=$1
+	local opt=$2
+
+	do_with_cb :logger "remount" \
+		"mount -o ${opt},remount ${dir} &>/dev/null" || return $?
+}
+
+#
+#$1:dir/dev
+#
+remount_ro() {
+	local dir=$1
+
+	do_remount ${dir} 'ro' || return #?
+}
+
+#
+#$1:dir/dev
+#
+remount_rw() {
+	local dir=$1
+
+	do_remount ${dir} 'rw' || return $?
 }
 
 #
 #$1:idx
-#$2:option
 #
-remount_rootfs() {
+remount_rootfs_ro() {
 	local idx=$1
-	local option=$2
-
-	local dev=dev_rootfs${idx}
 	local dir=dir_rootfs${idx}
-	local link=link_rootfs${idx}
 
-	umount ${!dev} > /dev/null 2>&1
-	rm -f ${!link} > /dev/null 2>&1
+	remount_ro ${!dir} || return $?
+}
 
-	mount -t ext4 ${option} ${!dev} ${!dir} > /dev/null 2>&1
-	LN_DIR ${!dir} ${!link}
+#
+#$1:idx
+#
+remount_rootfs_rw() {
+	local idx=$1
+	local dir=dir_rootfs${idx}
+
+	remount_rw ${!dir} || return $?
+}
+
+init_dev_rootfs() {
+	do_nothing
 }
 
 mount_rootfs() {
-	#
-	# readonly
-	#
-	do_mount ${dev_rootfs0} ${dir_rootfs0} 3 "no" "-r"
-	case "$(rootfs_current)" in
-	"0")
-		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes"
-		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes"
-		;;
-	"1")
-		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "no"
-		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes"
-		;;
-	"2")
-		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes"
-		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "no"
-		;;
-	esac
+#	do_mount ${dev_rootfs0} ${dir_rootfs0} 3 '-r'
+#	do_mount ${dev_rootfs1} ${dir_rootfs1} 3 '-r'
+#	do_mount ${dev_rootfs2} ${dir_rootfs2} 3 '-r'
+	do_mount ${dev_rootfs0} ${dir_rootfs0} 3
+	do_mount ${dev_rootfs1} ${dir_rootfs1} 3
+	do_mount ${dev_rootfs2} ${dir_rootfs2} 3
 
-	LN_DIR ${dir_rootfs0} ${link_rootfs0}
-	LN_DIR ${dir_rootfs1} ${link_rootfs1}
-	LN_DIR ${dir_rootfs2} ${link_rootfs2}
-	LN_DIR ${dir_rootfs}$(rootfs_buddy) ${link_buddy}
+	init_dev_rootfs
 }
 
 umount_rootfs() {
-	rm -f ${link_buddy}
-	rm -f ${link_rootfs2}
-	rm -f ${link_rootfs1}
-	rm -f ${link_rootfs0}
-
-	sync
-
 	do_umount ${dev_rootfs2}
 	do_umount ${dev_rootfs1}
 	do_umount ${dev_rootfs0}
 }
+
+#
+# for self big app
+#
+readonly dir_app=${dir_rootfs_data}/app
+readonly dir_app_bin=${dir_app}/bin
+readonly dir_app_etc=${dir_app}/etc
+readonly dir_app_lib=${dir_app}/lib
+readonly dir_app_mnt=${dir_app}/mnt
+readonly dir_app_opt=${dir_app}/opt
+readonly dir_app_usr=${dir_app}/usr
+readonly dir_app_usr_bin=${dir_app_usr}/bin
+readonly dir_app_usr_sbin=${dir_app_usr}/sbin
+readonly dir_app_usr_local=${dir_app_usr}/local
+readonly dir_app_sbin=${dir_app}/sbin
+
+#
+# for rootfsX config
+#
+readonly dir_data0=${dir_rootfs_data}/data0
+readonly dir_data1=${dir_rootfs_data}/data1
+readonly dir_data2=${dir_rootfs_data}/data2
+
+#
+# for all rootfs config
+#
+readonly dir_config=${dir_rootfs_data}/config
+readonly dir_config_nginx=${dir_config}/nginx
+readonly dir_config_php=${dir_config}/php
+
+init_dir_config() {
+	do_nothing
+}
+
+#
+# backup dir
+#
+readonly dir_backup=${dir_rootfs_data}/backup
+readonly dir_backup_log=${dir_backup}/log
 
 #
 # version(whole/patch) dir
@@ -462,108 +516,8 @@ readonly dir_rsync=${dir_rootfs_data}/rsync
 readonly dir_ap_rsync=${dir_rsync}/ap
 readonly dir_md_rsync=${dir_rsync}/md
 
-readonly dir_resource=${dir_rootfs_data}/resource
-
 #
-#$1:obj
-#
-rsync_basedir() {
-	local obj="$1"
-
-	echo "${dir_rsync}/${obj}"
-}
-
-#
-#$1:obj
-#
-whole_basedir() {
-	local obj="$1"
-
-	echo "${dir_version}/${obj}"
-}
-
-#
-#$1:obj
-#
-patch_basedir() {
-	local obj="$1"
-
-	echo "${dir_version}/${obj}"
-}
-
-
-#
-#$1:obj
-#$2:version
-#
-rsync_version_dir() {
-	local obj="$1"
-	local version="$2"
-
-	echo "$(rsync_basedir ${obj})/${version}"
-}
-
-#
-#$1:obj
-#$2:version
-#
-rsync_rootfs_dir() {
-	local obj="$1"
-	local version="$2"
-
-	echo "$(rsync_version_dir ${obj} ${version})/rootfs"
-}
-
-#
-#$1:obj
-#$2:type
-#
-get_version_basedir() {
-	local obj="$1"
-	local type="$2"
-
-	case "${type}" in
-	"rsync")
-		echo "$(rsync_basedir ${obj})"
-		;;
-	"whole")
-		echo "$(whole_basedir ${obj})"
-		;;
-	"patch")
-		echo "$(patch_basedir ${obj})"
-		;;
-	*)
-		return ${e_bad_board}
-		;;
-	esac
-}
-
-#
-#$1:obj
-#$2:type
-#
-get_version_list() {
-	local obj="$1"
-	local type="$2"
-	local dir="$(get_version_basedir ${obj} ${type})"
-
-	echo "$(ls ${dir})"
-}
-
-
-#
-# config dir, link to /config
-#
-readonly dir_config=${dir_rootfs_data}/config
-
-#
-# backup dir, link to /backup
-#
-readonly dir_backup=${dir_rootfs_data}/backup
-readonly dir_backup_log=${dir_backup}/log
-
-#
-# opt dir, link to /opt
+# opt dir
 #
 readonly dir_opt=${dir_rootfs_data}/opt
 
@@ -575,13 +529,12 @@ readonly dir_opt_log_dev_info=${dir_opt_log_dev}/info
 readonly dir_opt_log_dev_monitor=${dir_opt_log_dev}/monitor
 
 readonly dir_opt_log_vcc=${dir_opt_log}/vcc
+readonly dir_opt_log_onoff=${dir_opt_log}/onoff
 
 readonly dir_opt_log_drop=${dir_opt_log}/drop
 readonly dir_opt_log_drop_wifi=${dir_opt_log_drop}/wifi
 readonly dir_opt_log_drop_3g=${dir_opt_log_drop}/3g
 readonly dir_opt_log_drop_gps=${dir_opt_log_drop}/gps
-
-readonly dir_opt_log_onoff=${dir_opt_log}/onoff
 
 readonly dir_opt_log_flow=${dir_opt_log}/flow
 readonly dir_opt_log_flow_user=${dir_opt_log_flow}/user
@@ -626,72 +579,119 @@ readonly dir_opt_data_3g=${dir_opt_data}/3g
 readonly file_md_ulog=${dir_opt_log_sys_md_ulog}/messages
 
 #
-#$1:idx
+# tftp dir
 #
-mount_rootfs_data() {
-	local err=0
+readonly dir_tftp_log=${dir_tftp}/log
+readonly dir_tftp_log_gps=${dir_tftp_log}/gps
+readonly dir_tftp_log_usr=${dir_tftp_log}/usr
+readonly dir_tftp_log_auth=${dir_tftp_log}/auth
+readonly dir_tftp_log_sys=${dir_tftp_log}/sys
+readonly dir_tftp_log_sys_md=${dir_tftp_log_sys}/md
+readonly dir_tftp_log_sys_md_init=${dir_tftp_log_sys_md}/init
+readonly dir_tftp_log_sys_md_klog=${dir_tftp_log_sys_md}/klog
+readonly dir_tftp_log_sys_md_ulog=${dir_tftp_log_sys_md}/ulog
+readonly dir_tftp_log_sys_ap=${dir_tftp_log_sys}/ap
+readonly dir_tftp_log_sys_ap_init=${dir_tftp_log_sys_ap}/init
+readonly dir_tftp_log_sys_ap_klog=${dir_tftp_log_sys_ap}/klog
+readonly dir_tftp_log_sys_ap_ulog=${dir_tftp_log_sys_ap}/ulog
 
-	do_mount ${dev_rootfs_data} ${dir_rootfs_data} 5 "no" || {
-		return $?
-	}
-	
-	mkdir -p \
-		${dir_config} \
-		${dir_backup_log} \
-		${dir_ap_version} \
-		${dir_md_version} \
-		${dir_ap_rsync} \
-		${dir_md_rsync}
+readonly dir_tftp_data=${dir_tftp}/data
+readonly dir_tftp_data_gps=${dir_tftp_data}/gps
+readonly dir_tftp_data_3g=${dir_tftp_data}/3g
 
-        local dir
-        for dir in ${!dir_opt_*}; do
-                mkdir -p ${!dir}
-        done
+readonly dir_tftp_version=${dir_tftp}/version
 
+init_dir_tftp() {
 	#
-	# link /mnt/flash/rootfs_data to /data
+	# link ap boot
 	#
-	LN_DIR ${dir_rootfs_data} ${link_rootfs_data}
+	LN_FILE ${dir_rootfs0}/image/${file_ap_boot} ${dir_tftp}/${file_ap_boot}
 	#
-	# link /mnt/hd/zjhn to /data/zjhn
+	# link ap file(for ap super recover)
 	#
-	LN_DIR ${dir_cp} ${link_cp}
+	LN_FILE ${dir_rootfs0}/image/${file_ap} ${dir_tftp}/${file_ap_long}
 	#
-	# link /mnt/flash/rootfs_data/opt to /opt
+	# link ap file(for ap upgrade)
 	#
-	LN_DIR ${dir_opt} ${link_opt}
+	LN_FILE ${__ROOTFS__}/image/${file_ap} ${dir_tftp_version}/${file_ap}
+}
 
+#
+# opt dir ==> tftp dir
+#
+opt2tftp() {
+	#
+	# convert opt dir to tftp dir
+	# 	${dir_opt} and ${dir_tftp} have same sub dir
+	#
+	local opt
+	for opt in $(find ${dir_opt} -type d); do
+		local dir=$(sed "s#${dir_opt}#${dir_tftp}#" <<< ${opt})
+
+		mkdir -p ${dir}
+	done
+}
+
+setup_data_dir() {
+	setup_dir_with_prefix dir_ ${dir_rootfs_data}
+}
+
+setup_tmp_dir() {
+	setup_dir_with_prefix dir_ /tmp
+	opt2tftp
+}
+
+init_log() {
 	local now=$(getnow)
-	local file=${dir_opt_log_sys_md_init}/${now}
+	local file
+
 	#
 	# save md init info
 	#
+	file=${dir_opt_log_sys_md_init}/${now}
 	dmesg > ${file}; fsync ${file}
 
-	#
-	# save md syslog
-	#
-	file=${dir_opt_log_sys_md_ulog}/${now}; touch ${file}
-	#
-	# for readsyslog
-	#
-	LN_FILE ${file} ${file_md_ulog}
 	#
 	# start syslogd, log at rootfs_data
 	#	Max size (1024KB) before rotate
 	#
+	file=${dir_opt_log_sys_md_ulog}/${now}; touch ${file}
+	rm -f ${file_md_ulog}
+	LN_FILE ${file} ${file_md_ulog}
 	syslogd -s 1024 -O ${file}
+
 	#
 	# todo: how to save /proc/kmsg
 	#
 }
 
+init_dev_rootfs_data() {
+	setup_data_dir
+	init_log
+	init_dir_config
+}
+
+init_dev_tmp() {
+	setup_tmp_dir
+	init_dir_tftp
+	init_dir_status
+}
+
+#
+#$1:idx
+#
+mount_rootfs_data() {
+	local err=0
+
+	do_mount ${dev_rootfs_data} ${dir_rootfs_data} 5 || {
+		return $?
+	}
+
+	init_dev_rootfs_data
+	init_dev_tmp
+}
+
 umount_rootfs_data() {
-	rm -f ${link_opt}
-	rm -f ${link_rootfs_data}
-
-	sync
-
 	do_umount ${dev_rootfs_data}
 }
 
@@ -725,111 +725,4 @@ umount_all() {
 	umount_others
 
 	umount_self
-}
-
-#
-# plt dir
-#
-readonly dir_plt_syslog=${dir_plt}/syslog
-
-setup_dir_plt() {
-	local dir
-
-	for dir in ${!dir_plt_*}; do
-		mkdir -p ${!dir}
-	done
-}
-
-#
-# tftp dir
-#
-readonly dir_tftp_log=${dir_tftp}/log
-readonly dir_tftp_log_gps=${dir_tftp_log}/gps
-readonly dir_tftp_log_usr=${dir_tftp_log}/usr
-readonly dir_tftp_log_auth=${dir_tftp_log}/auth
-readonly dir_tftp_log_sys=${dir_tftp_log}/sys
-readonly dir_tftp_log_sys_md=${dir_tftp_log_sys}/md
-readonly dir_tftp_log_sys_md_init=${dir_tftp_log_sys_md}/init
-readonly dir_tftp_log_sys_md_klog=${dir_tftp_log_sys_md}/klog
-readonly dir_tftp_log_sys_md_ulog=${dir_tftp_log_sys_md}/ulog
-readonly dir_tftp_log_sys_ap=${dir_tftp_log_sys}/ap
-readonly dir_tftp_log_sys_ap_init=${dir_tftp_log_sys_ap}/init
-readonly dir_tftp_log_sys_ap_klog=${dir_tftp_log_sys_ap}/klog
-readonly dir_tftp_log_sys_ap_ulog=${dir_tftp_log_sys_ap}/ulog
-
-readonly dir_tftp_data=${dir_tftp}/data
-readonly dir_tftp_data_gps=${dir_tftp_data}/gps
-readonly dir_tftp_data_3g=${dir_tftp_data}/3g
-
-readonly dir_tftp_version=${dir_tftp}/version
-
-#
-# tftp dir/file ==> opt dir/file
-#
-#$1:tftp dir/file
-#
-tftp2opt() {
-	local file="$1"
-
-	echo ${file} | sed 's#/tmp/tftp/#/opt/#'
-}
-
-#
-# opt dir/file ==> tftp dir/file
-#
-#$1:opt dir/file
-#
-opt2tftp() {
-	local file="$1"
-
-	echo ${file} | sed 's#/opt/#/tmp/tftp/#'
-}
-
-setup_dir_tftp() {
-	local dir
-
-	for dir in ${!dir_tftp_*}; do
-		mkdir -p ${!dir}
-	done
-
-	#
-	# /tmp/tftp and /opt have same sub dir
-	#
-	#	/opt is softlink, so must end with /
-	#
-	for dir in $(find /opt/ -type d); do
-		mkdir -p $(opt2tftp ${dir})
-	done
-
-	#
-	# link ap boot
-	#
-	LN_FILE ${dir_rootfs0}/image/${file_ap_boot} ${dir_tftp}/${file_ap_boot}
-	#
-	# link ap file(for ap super recover)
-	#
-	LN_FILE ${dir_rootfs0}/image/${file_ap} ${dir_tftp}/${file_ap_long}
-	#
-	# link ap file(for ap upgrade)
-	#
-	LN_FILE ${__ROOTFS__}/image/${file_ap} ${dir_tftp_version}/${file_ap}
-}
-
-readonly file_status_3g=${dir_status}/3g
-readonly file_status_5g=${dir_status}/5g
-
-readonly LINK_UP=up
-readonly LINK_DOWN=down
-
-setup_dir_status() {
-	mkdir -p ${dir_status}
-
-	echo ${LINK_DOWN} > ${file_status_3g}
-	echo ${LINK_DOWN} > ${file_status_5g}
-}
-
-setup_dir() {
-	setup_dir_plt
-	setup_dir_tftp
-	setup_dir_status
 }

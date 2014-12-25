@@ -16,7 +16,7 @@ reset_check() {
 		#
 		# 0: reset is pushed
 		#
-		if [ "0" == "$(gpio reset)" ]; then
+		if [[ "0" == "$(gpio reset)" ]]; then
 			((count++))
 		else
 			count=0
@@ -39,7 +39,7 @@ reset_check() {
 }
 
 main() {
-	exec_with_flock ${file_lock_resetd} reset_check
+	do_with_flock ${file_lock_resetd} reset_check
 }
 
 main "$@"

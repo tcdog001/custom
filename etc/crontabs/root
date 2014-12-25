@@ -1,11 +1,14 @@
-*/15 * * * * /usr/sbin/usr_offline.sh &
-*/2  * * * * /usr/sbin/get_arplist.sh &
-*/10 * * * * ntpclient -h cn.pool.ntp.org -s -c 1
-*/5  * * * * /etc/platform/bin/curlhttpgps.sh &
-*/5  * * * * /etc/platform/bin/push_syslog.sh &
-*/10 * * * * /etc/platform/bin/command.sh &
-*/5  * * * * /etc/upgrade/rsync_task.sh &
-*/5  * * * * /usr/sbin/systemlog_md.sh &
+#
+# move to stimer
+#
+#*/15 * * * * /usr/sbin/usr_offline.sh &
+#*/2  * * * * /usr/sbin/get_arplist.sh &
+#*/10 * * * * ntpclient -h cn.pool.ntp.org -s -c 1
+#*/5  * * * * /etc/platform/bin/curlhttpgps.sh &
+#*/5  * * * * /etc/platform/bin/push_syslog.sh &
+#*/10 * * * * /etc/platform/bin/command.sh &
+#*/5  * * * * /etc/upgrade/rsync_task.sh &
+#*/5  * * * * /usr/sbin/systemlog_md.sh &
 #* * */1 * * /etc/platform/bin/fullUpdate.sh &
 #* * */1 * * /etc/platform/bin/incrementalUpdate.sh &
 

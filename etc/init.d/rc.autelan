@@ -2,7 +2,7 @@
 
 main() {
 	clock_set
-	. /etc/cp1.in	
+	. /etc/cp1.in
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
 
@@ -12,7 +12,7 @@ main() {
 	#
 	local mac="$(bootm pcba.mac)"
 	if [ -n "${mac}" ]; then
-        	ifconfig eth0 hw ether ${mac}
+		ifconfig eth0 hw ether ${mac}
 	fi
 	ifconfig eth0 up
 	ifconfig eth0 1.0.0.2 netmask 255.255.255.252
@@ -45,34 +45,33 @@ main() {
 	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
 	/bin/dnsmasq & 2>/dev/null
-	
+
 	/usr/sbin/crond -c /etc/crontabs/
+	xinetd &
 
 	#check the last time drop reason
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &
-	
-#	/usr/localweb/.compare_disk.sh &
+
+	/usr/localweb/.compare_disk.sh &
 
 	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
-	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
 	/usr/sbin/auto_reboot_md.sh &
 	#
 	# try start cp's init
 	#
 	if [[ -n "${__CP_DEVMAC__}" ]]; then
-		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
+			/etc/init.d/${__CP__}/init.sh 2>/dev/null &
 	fi
 
-        echo $(date '+%F-%H-%M-%S') > /tmp/.startup
-        
+	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+
 	#
-        # keep it last !!!
-        #
-        /etc/upgrade/rootfs_init.sh &
+	# keep it last !!!
+	#
+	/etc/upgrade/rootfs_init.sh &
 }
 
 main "$@"
-

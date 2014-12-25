@@ -14,7 +14,7 @@ echo "version $(cat /etc/.version)"
 
 . /etc/env.in
 
-# Mount fs accroding to /etc/fstab 
+# Mount fs accroding to /etc/fstab
 mount -a
 
 LDCONFIG=$(type -p ldconfig)
@@ -28,16 +28,15 @@ fi
 
 for initscript in /etc/init.d/S[0-9][0-9]*
 do
-	if [ -x $initscript ] ;
-	then
-		echo "[RCS]: $initscript"
-		$initscript
-	fi
+    if [ -x $initscript ] ;
+    then
+        echo "[RCS]: $initscript"
+        $initscript
+    fi
 done
 
 #
 # autelan init
 #
-#/etc/init.d/rc.autelan &
+# must NOT end with &
 /etc/init.d/rc.autelan
-

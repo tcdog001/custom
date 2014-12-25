@@ -43,7 +43,7 @@ main() {
 	sleep 30
 	while :
 	do
-		exec_with_flock ${sync_3g_lock_file} sync_3gstat
+		do_with_flock ${sync_3g_lock_file} sync_3gstat
 		sleep 10
 	done
 }

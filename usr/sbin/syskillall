@@ -3,15 +3,15 @@
 . ${__ROOTFS__}/etc/utils/utils.in
 
 main() {
-	local list="monitord monitors"
-	list="${list} ${list}"
-	killall ${list} > /dev/null 2>&1
+#	local list="monitord monitors"
+#	killall ${list} ${list} &> /dev/null
 
-	list="$(ls /etc/monitord.d 2>/dev/null) \
+	list=$(list_cons \
 		rsync_task.sh \
 		handshake_ap.sh \
 		upgrade_ap.sh \
 		upgrade_factory.sh \
+		websiteupgrade.sh \
 		rsync \
 		syslogd \
 		sleep \
@@ -22,13 +22,13 @@ main() {
 		wifidog \
 		telnetd \
 		ntpclient \
-		"
+		curl \
+		platform.sh \
+		stimer_system_startup.sh \
+		stimer_keepalive_ok.sh \
+		)
 
-	echo_logger "sysreboot" \
-		"killall ${list}"
-
-	list="${list} ${list}"
-	killall ${list} > /dev/null 2>&1
+	killall ${list} ${list} &> /dev/null
 }
 
 main "$@"

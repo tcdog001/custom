@@ -1,0 +1,25 @@
+{
+	"group": {
+		"high": {
+			"limit_up": "20",
+			"dlimit_own": "50",
+			"limit_conn": "50",
+			"limit_timeout": "900"
+		},
+
+		"low": {
+			"limit_up": "20",
+			"limit_down": "20",
+			"limit_conn": "50",
+			"limit_timeout": "900"
+		}
+	},
+
+	"range": {
+		"begin": "192.168.0.1",
+		"end": "192.168.0.254",
+		"exclude": [
+			"192.168.0.1"
+		]
+	}
+}

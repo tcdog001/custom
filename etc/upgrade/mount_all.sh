@@ -4,7 +4,6 @@
 
 main() {
 	mount_all
-	setup_dir
 }
 
 main "$@"

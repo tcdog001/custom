@@ -3,6 +3,44 @@
 . ${__ROOTFS__}/etc/upgrade/dir.in
 
 #
+#$1:info
+#
+website_logger() {
+	do_logger website "$@"
+}
+
+#
+#$1:info
+#
+website_echo_logger() {
+	echo_logger website "$@"
+}
+
+#
+#$1:local version
+#$2:config
+#
+website_upgrade_version() {
+	local version="$1"
+	local config="$2"
+
+	local target=$(awk -v version=${version} '{if ($1==version) print $2}' ${config})
+	case $(echo ${target} | wc -l) in
+	0)
+		website_logger "no found version, needn't upgrade"
+		;;
+	1)
+		website_logger "need upgrade: ${version}==>${target}"
+
+		echo "${target}"
+		;;
+	*)
+		website_logger "too more version, don't upgrade"
+		;;
+	esac
+}
+
+#
 #$1:remote
 #$2:dir
 #
@@ -19,51 +57,24 @@ website_rsync() {
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic="--rsh=\"${sshparam}\" --timeout=${timeout}"
 	local rsync_static="-acz --delete --force --stats --partial"
-	local action="rsync ${rsync_dynamic} ${rsync_static} ${server}:${remote} ${dir}"
 
 	local err=0
+	local action="rsync ${rsync_dynamic} ${rsync_static} ${server}:${remote} ${dir}"
 	eval "${action}"; err=$?
-	echo_logger "website" "$(get_error_tag ${err}): rsync ${remote}"
-	if ((0!=err)); then
-		return ${err}
-	fi
+	website_echo_logger "$(get_error_tag ${err}): rsync ${remote}"
+
+	return ${err}
 }
 
-website_local_version() {
-	local file=${dir_website}/ver.info
-
-	if [[ -f ${file} ]]; then
-		cat ${file}
-	else
-		echo zj1.2
-	fi
-}
-
-website_version() {
-	local version=$(website_local_version)
-	local target=$(awk -v version=${version} '{if ($1==version) print $2}' ${file_website_config})
-	case $(echo ${target} | wc -l) in
-	0)
-		logger "website" "no found version, needn't upgrade"
-		;;
-	1)
-		logger "website" "need upgrade: ${version}==>${target}"
-
-		echo "${target}"
-		;;
-	*)
-		logger "website" "too more version, don't upgrade"
-		;;
-	esac
-}
 
 website_upgrade() {
+	local dir_remote=/opt/version/lte-fi/website
 	#
 	# get config
 	#
-	website_rsync /opt/version/lte-fi/website/website_config ${dir_website_config} || return $?
+	website_rsync ${dir_remote}/website_config ${dir_website_config} || return $?
 	if [[ ! -f "${file_website_config}" ]]; then
-		logger "website" "no found ${file_website_config}"
+		website_logger "no found ${file_website_config}"
 
 		return
 	fi
@@ -71,29 +82,24 @@ website_upgrade() {
 	#
 	# read config
 	#
-	local version=$(website_version) || return $?
+	local version=$(website_upgrade_version \
+						$(< ${dir_website}/ver.info) \
+						${file_website_config}) || return $?
 	if [[ -z "${version}" ]]; then
+		website_logger "needn't upgrade"
+
 		return
 	fi
 
 	#
 	# do upgrade
 	#
-	website_rsync /opt/version/lte-fi/website/${version} ${dir_website_upgrade} || return $?
-	cp -fpR ${dir_website_upgrade}/* ${dir_website}; sync
+	website_rsync ${dir_remote}/${version} ${dir_website_upgrade} || return $?
+	cp -fpR ${dir_website_upgrade} ${dir_website}; sync
 }
 
 main() {
-	local err=0
-
-	sleep 60
-
-	for ((;;)); do
-		website_upgrade && return
-
-		sleep 300
-	done
+	website_upgrade
 }
 
 main "$@"
-

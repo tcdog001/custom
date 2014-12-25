@@ -19,7 +19,7 @@ monitor() {
 }
 
 main() {
-#	exec_with_flock ${file_lock_monitors} monitor
+#	do_with_flock ${file_lock_monitors} monitor
 	monitor
 }
 

@@ -8,8 +8,8 @@ main() {
 	local file=${dir_base}/.usbupgrade_auto
 	touch ${file}; fsync ${file}
 
-	local dir_rootfs=${dir_base}/rootfs
-	__ROOTFS__=${dir_rootfs} ${dir_rootfs}/etc/upgrade/usbupgrade.sh
+	local rootfs=${dir_base}/rootfs
+	__ROOTFS__=${rootfs} ${rootfs}/etc/upgrade/usbupgrade.sh
 }
 
 main
