@@ -14,7 +14,7 @@ readonly dir_tmp_stimer=/tmp/.stimer
 
 declare -A stimer
 
-declare stimer_interval=${__STIMER_INTERVAL__:-30}
+declare stimer_interval=${__STIMER_INTERVAL__:-10}
 declare stimer_seq=0
 declare stimer_log_line=0
 declare stimer_log_max=${__STIMER_LOG_MAX__:-10000}
@@ -194,7 +194,7 @@ stimer_trigger() {
 		stimer_show_update ${type} ${event} ${info}
 
 		set_stimer_field ${key} consume $((consume += stimer_interval))
-		if ((consume <= interval)); then
+		if ((consume < interval)); then
 			continue
 		fi
 
