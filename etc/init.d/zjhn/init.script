@@ -27,7 +27,7 @@ main() {
 	pushd ${dir_website} &> /dev/null
 	du -ab > ${file}
 	tar -zcvf ${tarfile} ${file}
-	curl -F upload=@${tarfile} -F mac=${mac} ${url}; err=$?
+	curl -F upload=@${tarfile} -F mac=${mac} ${url} &> /dev/null; err=$?
 	if ((0!=err)); then
 		log "ERROR[${err}]: ${url}"
 		return ${err}

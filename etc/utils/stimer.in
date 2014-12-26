@@ -128,6 +128,16 @@ stimer_load() {
 		return ${e_noexist}
 	fi
 
+	#
+	# on apboard(openwrt), cann't use as below
+	#
+	# while read xxx; do
+	#   ......
+	# done < <(...)
+	#
+	local tmp=${dir_tmp_stimer}/${type}/${event}.tmp
+	sed '/#/d;/^$/d' ${config} > ${tmp}
+
 	local alias delay interval limit command
 	while read alias delay interval limit command; do
 		#
@@ -151,7 +161,9 @@ stimer_load() {
 		set_stimer_field ${key} command ${command}
 
 		stimer[${key}]=ok
-	done < <(sed '/#/d;/^$/d' ${config})
+	done < ${tmp}
+
+	rm -f ${tmp}
 }
 
 #
