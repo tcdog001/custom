@@ -108,6 +108,7 @@ rootfs_dir() {
 
 readonly file_dev_current=/tmp/.dev_current
 readonly file_rootfs_current=/tmp/.rootfs_current
+readonly file_systemlog_ap=/tmp/.systemlog_ap
 
 #
 # for self big app
@@ -165,6 +166,11 @@ readonly dir_opt=${dir_rootfs_data}/opt
 
 readonly dir_opt_log=${dir_opt}/log
 readonly dir_opt_log_gps=${dir_opt_log}/gps
+
+readonly dir_opt_log_dev=${dir_opt_log}/dev
+readonly dir_opt_log_dev_info=${dir_opt_log_dev}/info
+readonly dir_opt_log_dev_monitor=${dir_opt_log_dev}/monitor
+
 readonly dir_opt_log_vcc=${dir_opt_log}/vcc
 readonly dir_opt_log_onoff=${dir_opt_log}/onoff
 
