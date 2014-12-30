@@ -14,14 +14,23 @@ main() {
 
 	url="http://data.9797168.com:8080/update/get_switch"
 	upload=$(curl -d mac=".${mac}." ${url}); err=$?
-	echo_logger zjhn_init "upload=${upload}, err=${err}"
 	if ((0!=err)); then
 		log "ERROR[${err}]: ${url}"
 		return ${err}
-	elif ((1!=upload)); then
-		log "needn't upload: ${url}"
-		return
 	fi
+	case "${upload}" in
+	"1")
+		log "upload: ${url}"
+		;;
+	"-1")
+		log "needn't upload: ${url}"
+		return 0
+		;;
+	*)
+		log "can't upload: upload not \"1\" or \"-1\""
+		return 1
+		;;
+	esac
 
 	url="http://data.9797168.com:8080/update/post_file"
 	local file=/tmp/du.list
