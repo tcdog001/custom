@@ -9,8 +9,8 @@ log() {
 main() {
 	local mac=${__CP_DEVMAC__}
 	local err=0
-	local upload
 	local url
+	local upload
 
 	url="http://data.9797168.com:8080/update/get_switch"
 	upload=$(curl -d mac=".${mac}." ${url}); err=$?
@@ -18,27 +18,33 @@ main() {
 		log "ERROR[${err}]: ${url}"
 		return ${err}
 	fi
+
 	case "${upload}" in
 	"1")
-		log "upload: ${url}"
 		;;
 	"-1")
 		log "needn't upload: ${url}"
-		return 0
+		return
 		;;
 	*)
-		log "can't upload: upload not \"1\" or \"-1\""
-		return 1
+		log "need upload err: ${url}"
+		return ${e_inval}
 		;;
 	esac
 
 	url="http://data.9797168.com:8080/update/post_file"
-	local file=/tmp/du.list
+	local file=du.list
 	local tarfile=/tmp/du_${mac}.tar.gz
+
 	pushd ${dir_website} &> /dev/null
-	/usr/app/du -ab > ${file}
+	/usr/app/du -ab > /tmp/${file}
+	popd &> /dev/null
+
+	pushd /tmp &> /dev/null
 	tar -zcvf ${tarfile} ${file}
-	curl -F upload=@${tarfile} -F mac=${mac} ${url}; err=$?
+	popd &> /dev/null
+
+	curl -F upload=@${tarfile} -F mac=${mac} ${url} &> /dev/null; err=$?
 	if ((0!=err)); then
 		log "ERROR[${err}]: ${url}"
 		return ${err}
