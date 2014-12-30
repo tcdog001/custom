@@ -6,7 +6,14 @@ main() {
 		init=/etc/init.d/${__CP__}/init.script
         fi
 
-	${init} 
+        local err=0
+	for ((;;)); do
+		${init}; err=$?
+		if ((0==err)); then
+		        return
+		fi
+		sleep 60
+        done
 }
 
 main "$@"

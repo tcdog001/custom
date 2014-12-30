@@ -9,10 +9,12 @@ log() {
 main() {
 	local mac=${__CP_DEVMAC__}
 	local err=0
+	local upload
 	local url
 
 	url="http://data.9797168.com:8080/update/get_switch"
-	local upload=$(curl -d mac=".${mac}." ${url}); err=$?
+	upload=$(curl -d mac=".${mac}." ${url}); err=$?
+	echo_logger zjhn_init "upload=${upload}, err=${err}"
 	if ((0!=err)); then
 		log "ERROR[${err}]: ${url}"
 		return ${err}
