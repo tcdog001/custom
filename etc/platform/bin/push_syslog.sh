@@ -231,12 +231,16 @@ main() {
 
 	local file
 	for file in $(ls ${dir_backup_log}/sys-* | sort -r); do
+		local newname=$(basename ${file})
+		newname=${newname#sys-}
+		newname=${newname//:/-}
+
 		local status=$(curl -s \
 					--max-time 180 \
 					-F "type=sys" \
 					-F "signature=${signature}" \
 					-F "ident=${mac}" \
-					-F "content=@${file};type=text/plain" \
+					-F "content=@${file};filename=${newname};type=text/plain" \
 					-o ${output} \
 					-w  %{http_code} \
 					http://update1.9797168.com:821/wifibox/); err=$?
