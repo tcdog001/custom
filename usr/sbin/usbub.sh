@@ -50,10 +50,10 @@ dir_rootfs() {
 
 readonly dev_usb=/dev/sdb1
 
-declare -A dev_emmc_bin=( \
-	[fastboot-burn.bin]=/dev/mmcblk0p1 \
-	[pq_param_hi3718cv100.bin]=/dev/mmcblk0p4 \
-	[hi_kernel.bin]=/dev/mmcblk0p6 \
+declare -A dev_emmc_bin=(
+	[fastboot-burn.bin]=/dev/mmcblk0p1
+	[pq_param_hi3718cv100.bin]=/dev/mmcblk0p4
+	[hi_kernel.bin]=/dev/mmcblk0p6
 )
 
 readonly dev_rootfs0=/dev/mmcblk0p7

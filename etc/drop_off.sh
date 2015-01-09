@@ -3,7 +3,7 @@
 get_onoff_log() {
 	local ontime=$( cat /data/md-on |sed -n '$p' )
 	local offtime=$(cat /data/md-off)
-	local file_path=/opt/log/onoff
+	local file_path=/data/opt/log/onoff
 	local line=$( grep -n "" /data/md-on |wc -l )
 	local del_line=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
 

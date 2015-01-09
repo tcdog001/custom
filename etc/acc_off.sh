@@ -3,7 +3,7 @@
 . /etc/platform/bin/platform.in
 
 get_onoff_log() {
-	local file_path=/opt/log/onoff
+	local file_path=/data/opt/log/onoff
 	local ontime_file=/data/md-on
 	local ontime=$( cat ${ontime_file} |sed -n '$p' )
 	local offtime=$(date '+%F-%H:%M:%S')
