@@ -100,7 +100,7 @@ rootfs_buddy() {
 	local idx=$1; idx=${idx:-$(rootfs_current)}
 
 	case ${idx} in
-	0)
+	0 | *)
 		echo 1
 
 		return ${e_inval}
@@ -111,12 +111,22 @@ rootfs_buddy() {
 	2)
 		echo 1
 		;;
-	*)
-		echo 1
-
-		return ${e_inval}
-		;;
 	esac
+}
+
+#
+#[$1:idx]
+#
+rootfs_dir() {
+	local idx="$1"
+
+	if [[ -z "${idx}" || "${idx}" == "$(rootfs_current)" ]]; then
+		echo /
+	else
+		local dir=dir_rootfs${idx}
+
+		echo "${!dir}"
+	fi
 }
 
 #
@@ -141,6 +151,32 @@ wait_dev() {
 }
 
 #
+#$1:dev
+#
+__dev_exist() {
+	local dev="$1"
+
+	if [[ -n "$(cat /proc/partitions | grep $(basename ${dev}))" ]]; then
+		echo yes
+	else
+		echo no
+	fi
+}
+
+#
+#$1:dev
+#
+__dev_mounted() {
+	local dev="$1"
+
+	if [[ "yes" == "$(__dev_exist ${dev})" && -n "$(mount | grep ${dev})" ]]; then
+		echo yes
+	else
+		echo no
+	fi
+}
+
+#
 #$1:dev name
 #$2:dir name
 #[$3:opt]
@@ -151,20 +187,18 @@ do_mount() {
 	local opt="$*"
 	local opt_fixed="-t ext4 -o noatime,nodiratime"
 
-	if [[ -n "$(mount | grep ${dev})" ]]; then
+	if [[ "yes" == "$(__dev_mounted ${dev})" ]]; then
 		#
 		# if have mounted, do nothing
 		#
 		echo "${dev} have mounted"
-
-		return
 	elif [[ "${dev}" != "$(dev_rootfs_current)" ]]; then
 		do_with_cb logger:echo_logger "fsck" \
-			"fsck.ext4 -p ${dev}" || return $?
+			"fsck.ext4 -p ${dev}"
+	else
+		do_with_cb logger:echo_logger "mount" \
+			"mount ${opt} ${opt_fixed} ${dev} ${dir}"
 	fi
-
-	do_with_cb logger:echo_logger "mount" \
-		"mount ${opt} ${opt_fixed} ${dev} ${dir}" || return $?
 }
 
 #
@@ -173,17 +207,16 @@ do_mount() {
 do_umount() {
 	local dev="$1"
 
-	if [[ -z "$(cat /proc/partitions | grep $(basename ${dev}))" ]]; then
-		return
-	elif [[ -z "$(mount | grep ${dev})" ]]; then
-		return
-	else
+	if [[ "yes" == "$(__dev_mounted ${dev})" ]]; then
 		do_with_cb :logger "umount" \
-			"umount -r ${dev}" || return $?
+			"umount -r ${dev}"
 	fi
 }
 
 init_dev_sd() {
+	#
+	# ptest MUST run front-end
+	#
 	local ptest=${dir_sd}/product_test.sh
 	if [[ -x "${ptest}" ]]; then
 		echo_logger "mount" \
@@ -240,6 +273,17 @@ umount_usb() {
 	do_umount ${dev_usb}
 }
 
+#
+#$1:dev/dir
+#
+get_mount_opt() {
+	local dev="$1"
+
+	local _ opt
+	IFS="(," read _ opt _ <<< $(mount | grep ${dev})
+
+	echo ${opt}
+}
 
 #
 #$1:dir/dev
@@ -249,46 +293,24 @@ do_remount() {
 	local dir=$1
 	local opt=$2
 
-	do_with_cb :logger "remount" \
-		"mount -o ${opt},remount ${dir} &>/dev/null" || return $?
-}
-
-#
-#$1:dir/dev
-#
-remount_ro() {
-	local dir=$1
-
-	do_remount ${dir} 'ro' || return #?
-}
-
-#
-#$1:dir/dev
-#
-remount_rw() {
-	local dir=$1
-
-	do_remount ${dir} 'rw' || return $?
+	if [[ "${opt}" != "$(get_mount_opt ${dir})" ]]; then
+		do_with_cb :logger "remount" \
+			"mount -o ${opt},remount ${dir} &>/dev/null"
+	fi
 }
 
 #
 #$1:idx
+#$2:opt
 #
-remount_rootfs_ro() {
+remount_rootfs() {
 	local idx=$1
-	local dir=dir_rootfs${idx}
+	local opt=$2
+	local current=$(rootfs_current)
 
-	remount_ro ${!dir} || return $?
-}
-
-#
-#$1:idx
-#
-remount_rootfs_rw() {
-	local idx=$1
-	local dir=dir_rootfs${idx}
-
-	remount_rw ${!dir} || return $?
+	if ((idx != current)); then
+		do_remount $(rootfs_dir ${idx}) ${opt}
+	fi
 }
 
 init_dev_rootfs() {
@@ -296,22 +318,47 @@ init_dev_rootfs() {
 }
 
 mount_rootfs() {
-	wait_dev ${dev_rootfs0} rootfs0 3 || return $?
-	do_mount ${dev_rootfs0} ${dir_rootfs0} '-r'
+	local idx
+	local current=$(rootfs_current)
 
-	wait_dev ${dev_rootfs1} rootfs1 3 || return $?
-	do_mount ${dev_rootfs1} ${dir_rootfs1}
+	#
+	# skip current rootfs
+	#
+	for ((idx=0; idx<3 && idx != current; idx++)); do
+		local dev=dev_rootfs${idx}
+		local dir=dir_rootfs${idx}
+		local alias=rootfs${idx}
 
-	wait_dev ${dev_rootfs2} rootfs2 3 || return $?
-	do_mount ${dev_rootfs2} ${dir_rootfs2}
+		wait_dev ${!dev} ${alias} 3 || {
+			echo_logger mount \
+				"no found ${!dev}"
+
+			continue
+		}
+
+		local opt
+		if ((0==idx)); then
+			opt="-r" # rootfs0 is readonly
+		fi
+
+		do_mount ${!dev} ${!dir} ${opt}
+	done
 
 	init_dev_rootfs
 }
 
 umount_rootfs() {
-	do_umount ${dev_rootfs2}
-	do_umount ${dev_rootfs1}
-	do_umount ${dev_rootfs0}
+	local idx
+	local current=$(rootfs_current)
+
+	#
+	# skip current rootfs
+	#
+	for ((idx=0; idx<3 && idx != current; idx++)); do
+		local dev=dev_rootfs${idx}
+
+		do_umount ${!dev}
+	done
 }
 
 init_dir_config() {

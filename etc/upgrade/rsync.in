@@ -27,6 +27,22 @@ rsync_rootfs_dir() {
 	echo $(rsync_version_dir ${version})/rootfs
 }
 
+
+#
+#$1:file(include path)
+#[$2:idx]
+#
+# rootfs_file ==> file
+# rootfs_file x ==> /rootfsX/file
+#
+rootfs_file() {
+	local file="$1"
+	local idx="$2"
+	local dir=$(rootfs_dir ${idx})
+
+	echo ${dir}/${file}
+}
+
 #
 #[$1:idx]
 #
@@ -35,22 +51,26 @@ rsync_rootfs_dir() {
 #
 rootfs_version_file() {
 	local idx=$1
+	local dir=$(rootfs_dir ${idx})
 
-	if [[ -z "${idx}" ]]; then
-		echo /etc/.version
-	else
-		echo $(rootfs_dir ${idx})/etc/.version
-	fi
+	echo ${dir}/etc/.version
 }
 
 #
 #[$1:idx]
 #
 buddy_version_file() {
-	local idx=$1; idx=${idx:-$(rootfs_current)}
+	local idx=$1
 
-	local dir=dir_data${idx}
-	echo "${!dir}/.buddy_version"
+	if [[ -z "${idx}" ]]; then
+		echo /etc/.version
+	else
+		echo $(rootfs_dir ${idx})/etc/.version
+	fi
+
+	local dir=dir_rootfs${idx}
+
+	echo "${!dir}/etc/.buddy_version"
 }
 
 #
@@ -59,8 +79,9 @@ buddy_version_file() {
 rootfs_verfy_file() {
 	local idx=$1; idx=${idx:-$(rootfs_current)}
 
-	local dir=dir_data${idx}
-	echo "${!dir}/.verfy"
+	local dir=dir_rootfs${idx}
+
+	echo "${!dir}/etc/.upgrade_verfy"
 }
 
 #
@@ -499,14 +520,14 @@ rsync_task() {
 	#   version >= version_rootfs_readonly
 	#   NOT support
 	#
-	local current_version=$(get_rootfs_version)
-	if [[ "lt" == "$(version_compare ${current_version} ${version_rootfs_readonly})" \
-	   && "lt" != "$(version_compare ${version} ${version_rootfs_readonly})" ]]; then
-		rsync_echo_logger ${FUNCNAME} \
-			"no supprot upgrade from ${current_version} to ${version}"
-
-		return ${e_nosupport}
-	fi
+#	local current_version=$(get_rootfs_version)
+#	if [[ "lt" == "$(version_compare ${current_version} ${version_rootfs_readonly})" \
+#	   && "lt" != "$(version_compare ${version} ${version_rootfs_readonly})" ]]; then
+#		rsync_echo_logger ${FUNCNAME} \
+#			"no supprot upgrade from ${current_version} to ${version}"
+#
+#		return ${e_nosupport}
+#	fi
 
 	local server=$(echo ${json} | jq -j '.server|strings')
 	if [[ -z "${server}" ]]; then
@@ -665,12 +686,12 @@ rsync_auto() {
 	rsync_logger "rsync_auto" "..."
 
 	for version in ${list}; do
-		local fsm="$(rsync_setvalue ${version} fsm)"
-		local state="$(rsync_setvalue ${version} state)"
+		local fsm="$(rsync_getvalue ${version} fsm)"
+		local state="$(rsync_getvalue ${version} state)"
 
 		if [[ "need" == "${fsm}" || "rsyncing" == "${fsm}" ]]; then
 			rsync_logger ${FUNCNAME} \
-			 	"start with version:${version} fsm:${fsm}"
+			 	"start with version:${version} fsm:${fsm} state:${state}"
 
 			rsync_task ${version}
 		fi
@@ -707,8 +728,8 @@ rsync_start() {
 	#
 	if [[ -d "${dir}" ]]; then
 		local base_setuped=0
-		local fsm="$(rsync_setvalue ${version} fsm)"
-		local state="$(rsync_setvalue ${version} state)"
+		local fsm="$(rsync_getvalue ${version} fsm)"
+		local state="$(rsync_getvalue ${version} state)"
 
 		if [[ -z "${fsm}" ]]; then
 			#

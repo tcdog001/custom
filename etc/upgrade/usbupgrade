@@ -7,6 +7,11 @@ main() {
 	#
 	local file=${dir_base}/.usbupgrade_auto
 	touch ${file}; fsync ${file}
+	#
+	# clean state
+	#
+	rm -f /mnt/flash/rootfs_data/.usbupgrade_state
+	bootm rootfs1=o rootfs1err=0 rootfs2=o rootfs2err=0
 
 	local rootfs=${dir_base}/rootfs
 	__ROOTFS__=${rootfs} ${rootfs}/etc/upgrade/usbupgrade.sh

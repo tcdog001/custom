@@ -72,6 +72,22 @@ do_with_cb() {
 	return ${err}
 }
 
+#
+#$1:wait
+#$2:action...
+#
+do_while_ok() {
+	local wait="$1"; shift
+	local action="$*"
+
+	local err=0
+	for ((;;)); do
+		eval "${action}" && return
+
+		sleep ${wait}
+	done
+}
+
 get_board_type() {
 	cat ${__ROOTFS__}/etc/boardtype
 }
@@ -190,7 +206,7 @@ get_error_tag() {
 display_waiting() {
 	local times=$1
 	local interval=$2
-	local output=$3
+	local output="$3"
 	local i
 
 	for ((i=0; i<times; i++)); do

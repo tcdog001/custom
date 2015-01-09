@@ -35,7 +35,7 @@ plt_obj_error() {
 	local ferror=${plt[action/${obj}/error]}
 	if [[ -n "${ferror}" ]]; then
 		log_with_limit ${ferror} \
-			"$(getnow) ${obj} ${action} error[${err}]: ${info}"
+			"$(getnow) ${obj} ${action} error[${errno}]: ${info}"
 	fi
 }
 
@@ -75,8 +75,13 @@ get_startup_file() {
 
 get_plt_register() {
 	local file=${plt[cloud/atbus/register]}
+	local i
 
-	while [[ ! -f "${file}" ]]; do
+	for ((i=0; i<300; i++)); do
+		if [[ -f "${file}" ]]; then
+			break
+		fi
+
 		sleep 1
 	done
 
@@ -221,16 +226,18 @@ curl_post() {
 	local opt=$(curl_opt "$@")
 
 	local err=0
+	local status
 	local url=$(get_plt_url ${obj})
 	local form=$(get_plt_form ${obj})
 	local action="curl ${opt} ${form} ${url}"
-	local status=$(eval "${action}"); err=$?
+	# todo: check
+	status=$(eval "${action}"); err=$?
 	if ((0!=err)); then
 		plt_obj_error ${obj} curl ${err}
 
 		return ${err}
 	elif [[ "200" != "${status}" ]]; then
-		plt_obj_error ${obj} curl badhttpcode ${status}
+		plt_obj_error ${obj} curl ${e_bad_httpcode} ${status}
 
 		return ${e_bad_httpcode}
 	fi
@@ -241,13 +248,10 @@ plt_do_register() {
 	local input="@$(get_plt_register)"
 	local output=${plt[action/${obj}/output]}
 	local interval=${plt[action/${obj}/interval]}
-	local err=0
 
 	for ((;;)); do
-		curl_post ${obj} "${input}"; err=$?
-		if ((0==err)); then
-			break
-		fi
+		curl_post ${obj} "${input}" \
+			&& break
 
 		sleep ${interval}
 	done
@@ -497,7 +501,7 @@ plt_gpslog_prepare() {
 #$1:obj
 #
 plt_syslog_prepare() {
-	local err=0
+	local obj="$1" #no used
 
 	local file=$(get_syslog_filename)
 	create_syslog ${file}
@@ -525,7 +529,6 @@ plt_log_check() {
 #
 plt_put_log() {
 	local obj="$1"
-	local err=0
 
 	plt_${obj}_prepare
 
@@ -539,19 +542,29 @@ plt_put_log() {
 			opt="-F \"content=\$(< ${file})\""
 			;;
 		file)
-			opt="-F \"content=@${file};type=text/plain\""
+			if [[ "sys" == "${prefix}" ]]; then
+				#
+				# sys-2015-01-01-14:00:01.tar.gz
+				#   ==>
+				# 2015-01-01-14-00-01.tar.gz
+				#
+				local newname=$(basename ${file})
+					  newname=${newname#sys-}
+					  newname=${newname//:/-}
+				opt="-F \"content=@${file};filename=${newname};type=text/plain\""
+			else
+				opt="-F \"content=@${file};type=text/plain\""
+			fi
+
 			;;
 		*)
 			continue
 			;;
 		esac
 
-		curl_post ${obj} _ ${opt}; err=$?
-		if ((0==err)); then
-			plt_log_check ${obj} || continue
-
-			rm -f ${file}
-		fi
+		curl_post ${obj} _ ${opt} \
+			&& plt_log_check ${obj} \
+			&& rm -f ${file}
 	done
 }
 
@@ -660,6 +673,7 @@ plt_serialize() {
 #
 plt_init_byjson() {
 	local json="$*"
+	local err=0
 
 	json_check ${json} || {
 		plt_logger "bad json"
@@ -667,11 +681,12 @@ plt_init_byjson() {
 		return ${e_bad_json}
 	}
 
-	json_to_aa plt "${json}" || {
+	json_to_aa plt "${json}"; err=$?
+	if ((0!=err)); then
 		plt_logger "ERROR[${err}]: bad json config"
 
-		return ${e_bad_json}
-	}
+		return ${err}
+	fi
 }
 
 #

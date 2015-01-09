@@ -5,7 +5,3 @@ export __CP_DEVMAC__=$(cat /data/.register.json 2>/dev/null | jq -j '.mac|string
 if [[ -f /etc/init.d/${__CP__}/env.in ]]; then
 	. /etc/init.d/${__CP__}/env.in
 fi
-
-if [[ -f ${__CP_SCRIPT__}/env.sh ]]; then
-	. ${__CP_SCRIPT__}/env.sh
-fi

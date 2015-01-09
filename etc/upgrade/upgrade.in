@@ -62,9 +62,13 @@ upgrade_task_running() {
 }
 
 setbootm() {
-	bootm "$@"
+	local err=0
+
+	bootm "$@"; err=$?
 
 	upgrade_echo_logger "bootm" "rootfs$(rootfs_current):bootm $@"
+
+	return ${err}
 }
 
 #
@@ -188,6 +192,9 @@ rootfs_upgrade() {
 			set_state=on
 			;;
 		"verfy")
+			#
+			# upgrade A && upgrade B ???
+			#
 			upgrade_echo_logger ${FUNCNAME} \
 				"last upgraded version:${version} wait verfy, don't need upgrade again"
 			return 0
@@ -239,9 +246,9 @@ rootfs_upgrade() {
 	#
 	# copy rootfs
 	#
-	remount_rootfs_rw ${idx}
+#	remount_rootfs ${idx} rw
 	rsync_copy ${src} ${dst}; err=$?
-	remount_rootfs_ro ${idx}
+#	remount_rootfs ${idx} rw
 	if (( 0 != err)); then
 		upgrade_debug_error "rootfs_upgrade" \
 		 	"upgrade ${src} to ${dst} failed:${err}"
@@ -254,6 +261,7 @@ rootfs_upgrade() {
 	touch $(rootfs_verfy_file ${idx})
 	#
 	# set buddy's /etc/.buddy_version = self version
+	# todo: save to bootenv
 	#
 	set_buddy_version "$(get_rootfs_version)" "${idx}"
 	#
@@ -562,7 +570,9 @@ rootfs_init() {
 		#   must after upgrade
 		#   must NOT reboot
 		#
-		${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
+		# Can remove handshake_ap ? 2015-01-05, liujf
+		#
+		#${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
 		;;
 	esac
 
@@ -651,13 +661,19 @@ rootfs_init() {
 		fi
 	fi
 
+	if ((0==err && 1==handshake)); then
+		${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
+	fi
+
+	#
+	# new timer
+	#
 	stimer_custom system startup \
 		pltcommand2 0 300 0 \
 		__PLATFORM_CONFIG__=/etc/platform/conf/.platform.json /etc/platform/bin/platform.sh command
 
+	#
+	# circle task
+	#
 	${__ROOTFS__}/etc/stimer/stimer_system_startup.sh &
-
-	if ((0==err && 1==handshake)); then
-		${__ROOTFS__}/etc/upgrade/handshake_ap.sh &
-	fi
 }

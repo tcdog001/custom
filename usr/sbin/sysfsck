@@ -25,11 +25,13 @@ fscheck_count() {
 	local dir=$1
 	local type=$2
 	local err=0
+	local count1
+	local count2
 
 	#
 	#check files all
 	#
-	local count1=$(find ${dir} -type ${type} | wc -l); err=$?
+	count1=$(find ${dir} -type ${type} | wc -l); err=$?
 	if ((0!=err)); then
 		fscheck_echo_logger "ERROR[${err}]: get files count"
 
@@ -37,7 +39,7 @@ fscheck_count() {
 	fi
 
 	local file=$(get_sysfsck_file ${dir} ${type})
-	local count2=$(cat ${file} | wc -l); err=$?
+	count2=$(cat ${file} | wc -l); err=$?
 	if ((0!=err)); then
 		fscheck_echo_logger "ERROR[${err}]: get ${file}'s line count"
 
@@ -103,11 +105,12 @@ fscheck_f() {
 	local dir=$1
 	local file
 	local md5
+	local fmd5
 	local err=0
 
 	pushd ${dir} > /dev/null
 	while read md5 file; do
-		local fmd5=$(md5sum ${file}); err=$?
+		fmd5=$(md5sum ${file}); err=$?
 		if ((0!=err)); then
 			fscheck_echo_logger "ERROR: make ${file} md5"
 

@@ -248,7 +248,9 @@ jsock() {
 			return ${e_bad_json}
 		}
 
-		local info=$(jsock_handle "${mode}" "${type}" "${name}" "${json}"); err=$?
+		local info
+		# todo: check
+		info=$(jsock_handle "${mode}" "${type}" "${name}" "${json}"); err=$?
 		if [[ -n "${info}" ]]; then
 			echo "${info}"
 		fi

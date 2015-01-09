@@ -1,19 +1,25 @@
 #!/bin/bash
 
-main() {
-	local init=${__CP_SCRIPT__}/init.sh
-	if [[ ! -f "${init}" ]]; then
-		init=/etc/init.d/${__CP__}/init.script
-        fi
+. ${__ROOTFS__}/etc/utils/utils.in
 
-        local err=0
+main() {
+	local init=/etc/init.d/${__CP__}/init.script
+	#
+	# 1: push du list
+	#
 	for ((;;)); do
-		${init}; err=$?
-		if ((0==err)); then
-		        return
-		fi
+		${init} && break
+
 		sleep 60
-        done
+	done
+
+	#
+	# 2: call CP's init
+	#
+	init=${__CP_SCRIPT__}/init.sh
+	if [[ -f "${init}" ]]; then
+		${init}
+	fi
 }
 
 main "$@"

@@ -99,7 +99,13 @@ website_upgrade() {
 }
 
 main() {
-	website_upgrade
+
+	while :
+	do
+		website_upgrade && return
+
+		sleep 600
+	done
 }
 
 main "$@"

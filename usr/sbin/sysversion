@@ -5,16 +5,22 @@
 
 #
 #$1:idx/buddy/ap
+#[$2:current rootfs]
 #
 get_sysversion() {
 	local idx="$1"
+	local current="$2"
 
 	case ${idx} in
 	ap)
 		${__ROOTFS__}/etc/jsock/jcmd.sh syn cat /etc/.version
 		;;
 	0 | 1 | 2)
-		echo $(get_rootfs_version ${idx})
+		local suffix
+		if ((idx == current)); then
+			suffix="*"
+		fi
+		echo $(get_rootfs_version ${idx})${suffix}
 		;;
 	buddy)
 		echo $(get_rootfs_version $(rootfs_buddy))
@@ -33,9 +39,11 @@ main() {
 
 	case ${idx} in
 	all)
-		get_sysversion 0
-		get_sysversion 1
-		get_sysversion 2
+		local current=$(rootfs_current)
+
+		get_sysversion 0 ${current}
+		get_sysversion 1 ${current}
+		get_sysversion 2 ${current}
 		get_sysversion ap
 		;;
 	*)

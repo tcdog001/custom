@@ -46,8 +46,8 @@ usbupgrade_state() {
 		# set state
 		#
 		if [ "none" == "${state}" ]; then
-			rm -f ${file_usbupgrade_state}
-			rm -f ${file_usbupgrade_auto}
+			rm -f ${file_usbupgrade_state} \
+				${file_usbupgrade_auto} 2>/dev/null
 		else
 			echo ${state} > ${file_usbupgrade_state}
 			fsync ${file_usbupgrade_state}
@@ -150,9 +150,9 @@ usbupgrade_rootfs() {
 	local dst=$(rootfs_dir ${idx})
 	local err=0
 
-	remount_rootfs_rw ${idx}
+#	remount_rootfs ${idx} rw
 	do_with_usbupgrade_echo_logger rsync_copy ${src} ${dst}; err=$?
-	remount_rootfs_ro ${idx}
+#	remount_rootfs ${idx} ro
 
 	if ((0!=idx)); then
 		#
