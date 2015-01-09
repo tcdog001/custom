@@ -12,13 +12,13 @@
 upgrade_factory() {
 	local version=$1
 	local buddy=$(rootfs_buddy)
-	local dev=dev_rootfs${buddy}
+	local dev=dev_rootfs${buddy}; dev=${!dev}
 	local err=0
 
 	upgrade_echo_logger ${FUNCNAME} \
-		"upgrade_task failed[${err}], try dd if=${dev_rootfs0} of=${!dev}"
+		"upgrade_task failed[${err}], try dd if=${dev_rootfs0} of=${dev}"
 
-	dd if=${dev_rootfs0} of=${!dev}; err=$?
+	dd if=${dev_rootfs0} of=${dev}; err=$?
 	if ((0!=err)); then
 		upgrade_echo_logger ${FUNCNAME} \
 			"dd buddy failed[${err}], try super recover"

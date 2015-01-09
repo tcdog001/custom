@@ -26,16 +26,6 @@ readonly dev_rootfs2=/dev/mmcblk0p9
 readonly dev_rootfs_data=/dev/mmcblk0p10
 
 #
-#$1:idx
-#
-rootfs_dev() {
-	local idx="$1"
-	local dev=dev_rootfs${idx}
-
-	echo "${!dev}"
-}
-
-#
 # base dir
 #
 readonly dir_flash=/mnt/flash
@@ -67,7 +57,6 @@ readonly dir_website_config=${dir_hd}/website_config
 #
 readonly dir_custom=${dir_hd}/custom/${__CP__}
 readonly dir_custom_script=${dir_custom}/script
-readonly file_custom_init=${dir_custom_script}/init.sh
 
 readonly dir_tmp_custom=${__CP_TEMP__}
 
@@ -96,19 +85,8 @@ readonly dir_rootfs1=${dir_flash}/rootfs1
 readonly dir_rootfs2=${dir_flash}/rootfs2
 readonly dir_rootfs_data=${dir_flash}/rootfs_data
 
-#
-#$1:idx
-#
-rootfs_dir() {
-	local idx="$1"
-	local dir=dir_rootfs${idx}
-
-	echo "${!dir}"
-}
-
 readonly file_dev_current=/tmp/.dev_current
 readonly file_rootfs_current=/tmp/.rootfs_current
-readonly file_systemlog_ap=/tmp/.systemlog_ap
 
 #
 # for self big app
@@ -143,7 +121,9 @@ readonly dir_config_php=${dir_config}/php
 # backup dir
 #
 readonly dir_backup=${dir_rootfs_data}/backup
-readonly dir_backup_log=${dir_backup}/log
+readonly dir_backup_log=${dir_backup}/log       #same
+readonly dir_backup_log_gps=${dir_backup}/log   #same
+readonly dir_backup_log_sys=${dir_backup}/log   #same
 
 #
 # version(whole/patch) dir
@@ -166,11 +146,6 @@ readonly dir_opt=${dir_rootfs_data}/opt
 
 readonly dir_opt_log=${dir_opt}/log
 readonly dir_opt_log_gps=${dir_opt_log}/gps
-
-readonly dir_opt_log_dev=${dir_opt_log}/dev
-readonly dir_opt_log_dev_info=${dir_opt_log_dev}/info
-readonly dir_opt_log_dev_monitor=${dir_opt_log_dev}/monitor
-
 readonly dir_opt_log_vcc=${dir_opt_log}/vcc
 readonly dir_opt_log_onoff=${dir_opt_log}/onoff
 

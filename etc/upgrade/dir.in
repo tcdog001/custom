@@ -117,15 +117,26 @@ rootfs_buddy() {
 #
 #[$1:idx]
 #
+rootfs_dev() {
+	local idx="$1"; idx=${idx:-$(rootfs_current)}
+
+	local dev=dev_rootfs${idx}; dev=${!dev}
+
+	echo "${dev}"
+}
+
+#
+#[$1:idx]
+#
 rootfs_dir() {
 	local idx="$1"
 
 	if [[ -z "${idx}" || "${idx}" == "$(rootfs_current)" ]]; then
 		echo /
 	else
-		local dir=dir_rootfs${idx}
+		local dir=dir_rootfs${idx}; dir=${!dir}
 
-		echo "${!dir}"
+		echo "${dir}"
 	fi
 }
 
@@ -238,8 +249,8 @@ umount_sd() {
 }
 
 init_dev_hd() {
-	if [[ -d "${dir_website}" ]]; then
-		chmod -R 777 ${dir_website}
+	if [[ -d "${__CP_WEBSITE__}" ]]; then
+		chmod -R 777 ${__CP_WEBSITE__}
 	fi
 
 	setup_dir_with_prefix dir_ ${dir_hd}
@@ -325,13 +336,13 @@ mount_rootfs() {
 	# skip current rootfs
 	#
 	for ((idx=0; idx<3 && idx != current; idx++)); do
-		local dev=dev_rootfs${idx}
-		local dir=dir_rootfs${idx}
+		local dev=dev_rootfs${idx}; dev=${!dev}
+		local dir=dir_rootfs${idx}; dir=${!dir}
 		local alias=rootfs${idx}
 
-		wait_dev ${!dev} ${alias} 3 || {
+		wait_dev ${dev} ${alias} 3 || {
 			echo_logger mount \
-				"no found ${!dev}"
+				"no found ${dev}"
 
 			continue
 		}
@@ -341,7 +352,7 @@ mount_rootfs() {
 			opt="-r" # rootfs0 is readonly
 		fi
 
-		do_mount ${!dev} ${!dir} ${opt}
+		do_mount ${dev} ${dir} ${opt}
 	done
 
 	init_dev_rootfs
@@ -355,9 +366,9 @@ umount_rootfs() {
 	# skip current rootfs
 	#
 	for ((idx=0; idx<3 && idx != current; idx++)); do
-		local dev=dev_rootfs${idx}
+		local dev=dev_rootfs${idx}; dev=${!dev}
 
-		do_umount ${!dev}
+		do_umount ${dev}
 	done
 }
 

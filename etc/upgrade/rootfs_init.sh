@@ -4,6 +4,7 @@
 
 main() {
 	${__ROOTFS__}/usr/sbin/resetd &
+	${__ROOTFS__}/etc/platform/bin/godusevpn.sh &
 
 	__PLATFORM_CONFIG__=/etc/platform/conf/.platform.json \
 		${__ROOTFS__}/etc/platform/bin/register.sh &

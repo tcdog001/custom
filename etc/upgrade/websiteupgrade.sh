@@ -25,19 +25,17 @@ website_upgrade_version() {
 	local config="$2"
 
 	local target=$(awk -v version=${version} '{if ($1==version) print $2}' ${config})
-	case $(echo ${target} | wc -l) in
-	0)
+	local count=$(echo ${target} | wc -l)
+
+	if [[ -z "${target}" || "0" == "${count}" ]]; then
 		website_logger "no found version, needn't upgrade"
-		;;
-	1)
+	elif ((1==count)); then
 		website_logger "need upgrade: ${version}==>${target}"
 
 		echo "${target}"
-		;;
-	*)
+	else
 		website_logger "too more version, don't upgrade"
-		;;
-	esac
+	fi
 }
 
 #
@@ -83,7 +81,7 @@ website_upgrade() {
 	# read config
 	#
 	local version=$(website_upgrade_version \
-						$(< ${dir_website}/ver.info) \
+						$(< ${__CP_WEBSITE__}/ver.info) \
 						${file_website_config}) || return $?
 	if [[ -z "${version}" ]]; then
 		website_logger "needn't upgrade"
@@ -95,7 +93,7 @@ website_upgrade() {
 	# do upgrade
 	#
 	website_rsync ${dir_remote}/${version} ${dir_website_upgrade} || return $?
-	cp -fpR ${dir_website_upgrade} ${dir_website}; sync
+	cp -fpR ${dir_website_upgrade} ${__CP_WEBSITE__}; sync
 }
 
 main() {

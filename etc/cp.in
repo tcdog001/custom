@@ -1,0 +1,29 @@
+#!/bin/bash
+
+get_cp_name() {
+	echo zjhn
+}
+
+get_cp_mac() {
+	echo #todo
+}
+
+get_cp_dir_home() {
+	echo /data/$(get_cp_name)
+}
+
+get_cp_dir_script() {
+	echo $(get_cp_dir_home)/script
+}
+
+get_cp_dir_website() {
+	echo /mnt/hd/website
+}
+
+get_cp_dir_log_gps() {
+	echo /tmp/tftp/log/gps
+}
+
+get_cp_dir_log_sys() {
+	echo /tmp/tftp/log/sys
+}

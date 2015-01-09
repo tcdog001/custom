@@ -1,9 +1,0 @@
-#!/bin/bash
-
-. ${__ROOTFS__}/etc/upgrade/rsync.in
-
-main() {
-	echo $(rootfs_current)
-}
-
-main "$@"

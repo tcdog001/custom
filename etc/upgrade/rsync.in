@@ -68,9 +68,9 @@ buddy_version_file() {
 		echo $(rootfs_dir ${idx})/etc/.version
 	fi
 
-	local dir=dir_rootfs${idx}
+	local dir=dir_rootfs${idx}; dir=${!dir}
 
-	echo "${!dir}/etc/.buddy_version"
+	echo "${dir}/etc/.buddy_version"
 }
 
 #
@@ -79,9 +79,9 @@ buddy_version_file() {
 rootfs_verfy_file() {
 	local idx=$1; idx=${idx:-$(rootfs_current)}
 
-	local dir=dir_rootfs${idx}
+	local dir=dir_rootfs${idx}; dir=${!dir}
 
-	echo "${!dir}/etc/.upgrade_verfy"
+	echo "${dir}/etc/.upgrade_verfy"
 }
 
 #
@@ -413,12 +413,12 @@ rsync_setup_by() {
 	local err
 
 	if ((0==idx)); then
-		remount_rootfs_rw 0
+		remount_rootfs 0 rw
 	fi
 	mkdir -p ${dst}
 	rsync_copy ${src} ${dst}; err=$?
 	if ((0==idx)); then
-		remount_rootfs_ro 0
+		remount_rootfs 0 ro
 	fi
 	if ((0!=err)); then
 		rsync_debug_error "copy ${src} to ${dst} failed:${err}"

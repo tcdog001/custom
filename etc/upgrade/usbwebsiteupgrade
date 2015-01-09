@@ -1,6 +1,5 @@
 #!/bin/bash
 
-readonly dir_website=/mnt/hd/website
 readonly dir_usbwebsite=/mnt/usb/upgrade/website
 readonly file_usbwebsite_config=${dir_usbwebsite}/website.conf
 
@@ -53,7 +52,7 @@ usbwebsite_upgrade() {
 	local on_rootfs="on rootfs:$(cat /etc/.version)"
 
 	if [[ -z "${upgrade_version}" ]]; then
-		local file=${dir_website}/ver.info
+		local file=${__CP_WEBSITE__}/ver.info
 		if [[ ! -f "${file}" ]]; then
 			usbwebsite_echo_logger \
 				"ERROR: not support ${action} ${on_rootfs}"
@@ -74,7 +73,7 @@ usbwebsite_upgrade() {
 	fi
 
 	local src=${dir_usbwebsite}/${upgrade_version}
-	local dst=${dir_website}
+	local dst=${__CP_WEBSITE__}
 	if  [[ ! -d "${src}" ]]; then
 		usbwebsite_echo_logger \
 			"no found ${upgrade_version}"

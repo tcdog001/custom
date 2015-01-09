@@ -249,7 +249,6 @@ jsock() {
 		}
 
 		local info
-		# todo: check
 		info=$(jsock_handle "${mode}" "${type}" "${name}" "${json}"); err=$?
 		if [[ -n "${info}" ]]; then
 			echo "${info}"

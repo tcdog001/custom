@@ -113,7 +113,7 @@ jsock_cb() {
 			if [[ -x "${cb}" ]]; then
 				local err=0
 				local tmp
-				# todo: check
+
 				tmp=$( (${cb} ${body}) 2>&1 ); err=$?
 				if ((0==err)); then
 					stdout=$(strcat "${stdout}" "${tmp}")

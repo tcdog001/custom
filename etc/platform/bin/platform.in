@@ -230,7 +230,7 @@ curl_post() {
 	local url=$(get_plt_url ${obj})
 	local form=$(get_plt_form ${obj})
 	local action="curl ${opt} ${form} ${url}"
-	# todo: check
+
 	status=$(eval "${action}"); err=$?
 	if ((0!=err)); then
 		plt_obj_error ${obj} curl ${err}
@@ -484,7 +484,6 @@ create_syslog() {
 
 plt_gpslog_prepare() {
 	local startup=$(get_startup_file ${dir_opt_log_gps})
-	local err=0
 
 	local file
 	for file in $(ls ${dir_opt_log_gps} | grep gps-); do
