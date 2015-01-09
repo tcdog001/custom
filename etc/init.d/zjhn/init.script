@@ -37,7 +37,7 @@ main() {
 	local tarfile=/tmp/du_${mac}.tar.gz
 
 	pushd ${dir_website} &> /dev/null
-	/usr/app/du -ab > /tmp/${file}
+	du -ab > /tmp/${file}
 	popd &> /dev/null
 
 	pushd /tmp &> /dev/null
