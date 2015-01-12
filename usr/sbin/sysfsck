@@ -150,19 +150,26 @@ main() {
 	local version=$1 #yes, is $1
 	local dir
 
-	case ${idx} in
-	0|1|2)
-		dir=$(rootfs_dir ${idx})
-		;;
-	*)
-		version_check ${version} || {
-			return ${e_bad_version}
-		}
+	if [[ "${idx}" == "$(rootfs_current)" ]]; then
+		dir=/
+	else
+		case ${idx} in
+		0|1|2)
+			dir=$(rootfs_dir ${idx})
+			;;
+		*)
+			version_check ${version} || {
+				return ${e_bad_version}
+			}
 
-		dir=$(rsync_rootfs_dir ${version})
-		;;
-	esac
+			dir=$(rsync_rootfs_dir ${version})
+			;;
+		esac
+	fi
 
+	#
+	# todo: exclude /rootfsX /usb /hd /sd ...
+	#
 	fscheck ${dir} || return $?
 }
 

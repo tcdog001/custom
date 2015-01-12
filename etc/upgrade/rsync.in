@@ -27,22 +27,6 @@ rsync_rootfs_dir() {
 	echo $(rsync_version_dir ${version})/rootfs
 }
 
-
-#
-#$1:file(include path)
-#[$2:idx]
-#
-# rootfs_file ==> file
-# rootfs_file x ==> /rootfsX/file
-#
-rootfs_file() {
-	local file="$1"
-	local idx="$2"
-	local dir=$(rootfs_dir ${idx})
-
-	echo ${dir}/${file}
-}
-
 #
 #[$1:idx]
 #
@@ -50,27 +34,18 @@ rootfs_file() {
 # rootfs_version_file x ==> /rootfsX/etc/.version
 #
 rootfs_version_file() {
-	local idx=$1
-	local dir=$(rootfs_dir ${idx})
+	local idx=$1; idx=${idx:-$(rootfs_current)}
 
-	echo ${dir}/etc/.version
+	echo "$(rootfs_dir ${idx})/etc/.version"
 }
 
 #
 #[$1:idx]
 #
 buddy_version_file() {
-	local idx=$1
+	local idx=$1; idx=${idx:-$(rootfs_current)}
 
-	if [[ -z "${idx}" ]]; then
-		echo /etc/.version
-	else
-		echo $(rootfs_dir ${idx})/etc/.version
-	fi
-
-	local dir=dir_rootfs${idx}; dir=${!dir}
-
-	echo "${dir}/etc/.buddy_version"
+	echo "$(rootfs_dir ${idx})/etc/.buddy_version"
 }
 
 #
@@ -79,9 +54,7 @@ buddy_version_file() {
 rootfs_verfy_file() {
 	local idx=$1; idx=${idx:-$(rootfs_current)}
 
-	local dir=dir_rootfs${idx}; dir=${!dir}
-
-	echo "${dir}/etc/.upgrade_verfy"
+	echo "$(rootfs_dir ${idx})/etc/.upgrade_verfy"
 }
 
 #
@@ -94,7 +67,7 @@ get_rootfs_version() {
 	local idx=$1
 
 	local file=$(rootfs_version_file ${idx})
-	echo $(get_file_value ${file})
+	echo "$(get_file_value ${file})"
 }
 
 #
@@ -107,7 +80,7 @@ get_buddy_version() {
 	local idx=$1
 
 	local file=$(buddy_version_file ${idx})
-	echo $(get_file_value ${file})
+	echo "$(get_file_value ${file})"
 }
 
 #
@@ -407,6 +380,10 @@ rsync_copy() {
 #
 rsync_setup_by() {
 	local idx="$1"
+	if [[ "${idx}" == "$(rootfs_current)" ]]; then
+		return ${e_nosupport}
+	fi
+
 	local version="$(get_rootfs_version ${idx})"
 	local src="$(rootfs_dir ${idx})"
 	local dst="$(rsync_rootfs_dir ${version})"
@@ -415,7 +392,7 @@ rsync_setup_by() {
 	if ((0==idx)); then
 		remount_rootfs 0 rw
 	fi
-	mkdir -p ${dst}
+	MKDIR ${dst}
 	rsync_copy ${src} ${dst}; err=$?
 	if ((0==idx)); then
 		remount_rootfs 0 ro
@@ -766,7 +743,7 @@ rsync_start() {
 		# use newest as rsync base version
 		#
 		local newestdir="$(rsync_rootfs_dir ${newest})"
-		mkdir -p ${dir}
+		MKDIR ${dir}
 		cp -fpR ${newestdir}/* ${dir}; sync
 		#
 		# todo: check

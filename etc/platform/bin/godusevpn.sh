@@ -17,7 +17,8 @@ recover() {
 	status=$(curl -w %{http_code} \
 		-o ${file} \
 		-u autelanauteviewlms:autelanauteviewlms20140925 \
-		https://recover.autelan.com:22222/LMS/lte/recover.do); err=$?
+		https://recover.autelan.com:22222/LMS/lte/recover.do \
+		2>/dev/null); err=$?
 	if ((0!=err)); then
 		log "curl error:${err}"
 

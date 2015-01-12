@@ -79,7 +79,7 @@ bootm_fail() {
 	local buddy=$(rootfs_buddy ${idx})
 
 	#
-	# set bootenv rootfs = rootfsX's buddy
+	# set bootenv startup from rootfsX's buddy
 	# set bootenv rootfsX state = fail
 	# set bootenv rootfsX error = 0
 	#
@@ -93,10 +93,11 @@ bootm_fail() {
 #$1:idx
 #
 bootm_verfy() {
-	local idx=$1
+	local idx="$1"
 
 	#
-	# set bootenv startup rootfs to rootfsX
+	# set bootenv startup from rootfsX
+	# set bootenv rootfsX state = verfy
 	# set bootenv rootfsX's error to 0
 	#
 	setbootm \
@@ -154,12 +155,12 @@ rootfs_upgrade() {
 		upgrade_debug_error "rootfs_upgrade" \
 			"cannot upgrade rootfs0"
 
-		return ${e_inval}
+		return ${e_nosupport}
 	elif ((current == idx)); then
 		upgrade_debug_error "rootfs_upgrade" \
 			"cannot upgrade current rootfs"
 
-		return ${e_inval}
+		return ${e_nosupport}
 	fi
 
 	#
@@ -179,19 +180,19 @@ rootfs_upgrade() {
 		upgrade_echo_logger ${FUNCNAME} \
 			"input version:${version} state:${state}"
 
-		case "${state}" in
-		"need")
+		case ${state} in
+		need)
 			upgrade_echo_logger ${FUNCNAME} \
 				"rsync ok, can upgrade use this version:${version}"
 
 			set_state=on
 			;;
-		"upgrading")
+		upgrading)
 			upgrade_echo_logger ${FUNCNAME} \
 				"last upgrade is break, upgrade again use this version:${version}"
 			set_state=on
 			;;
-		"verfy")
+		verfy)
 			#
 			# upgrade A && upgrade B ???
 			#
@@ -199,11 +200,11 @@ rootfs_upgrade() {
 				"last upgraded version:${version} wait verfy, don't need upgrade again"
 			return 0
 			;;
-		"ok")
+		ok)
 			upgrade_echo_logger ${FUNCNAME} \
 				"upgrade have verfy ok, can upgrade use this version:${version}"
 			;;
-		"fail")
+		fail)
 			version="$(rsync_newest_version)"
 			upgrade_echo_logger ${FUNCNAME} \
 				"use newest version:${version}"
@@ -261,7 +262,7 @@ rootfs_upgrade() {
 	touch $(rootfs_verfy_file ${idx})
 	#
 	# set buddy's /etc/.buddy_version = self version
-	# todo: save to bootenv
+	# todo: save buddy version to bootenv ???
 	#
 	set_buddy_version "$(get_rootfs_version)" "${idx}"
 	#

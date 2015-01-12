@@ -17,7 +17,7 @@ get_sysversion() {
 		;;
 	0 | 1 | 2)
 		local suffix
-		if ((idx == current)); then
+		if [[ "${idx}" == "${current}" ]]; then
 			suffix="*"
 		fi
 		echo $(get_rootfs_version ${idx})${suffix}

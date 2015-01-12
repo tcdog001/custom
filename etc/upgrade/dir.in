@@ -33,11 +33,12 @@ dev_rootfs_current() {
 	# get from cache
 	#
 	local dev=$(getfilevalue ${file_dev_current} "")
-	if [[ -n "${dev}" ]]; then
+	case ${dev} in
+	/dev/mmcblk0p[7-9])
 		echo ${dev}
-
 		return
-	fi
+		;;
+	esac
 
 	#
 	# get from /proc/cmdline
@@ -63,11 +64,12 @@ rootfs_current() {
 	# get from cache
 	#
 	local idx=$(getfilevalue ${file_rootfs_current} "")
-	if [[ -n "${idx}" ]]; then
+	case ${idx} in
+	0 | 1 | 2)
 		echo ${idx}
-
 		return
-	fi
+		;;
+	esac
 
 	local dev=$(dev_rootfs_current)
 	idx=${DEV_ROOTFS[${dev}]}
@@ -100,16 +102,16 @@ rootfs_buddy() {
 	local idx=$1; idx=${idx:-$(rootfs_current)}
 
 	case ${idx} in
-	0 | *)
+	2)
 		echo 1
-
-		return ${e_inval}
 		;;
 	1)
 		echo 2
 		;;
-	2)
+	0 | *)
 		echo 1
+
+		return ${e_inval}
 		;;
 	esac
 }
@@ -119,24 +121,24 @@ rootfs_buddy() {
 #
 rootfs_dev() {
 	local idx="$1"; idx=${idx:-$(rootfs_current)}
-
-	local dev=dev_rootfs${idx}; dev=${!dev}
-
-	echo "${dev}"
+	local dev=dev_rootfs${idx}
+	echo "${!dev}"
 }
 
 #
 #[$1:idx]
 #
 rootfs_dir() {
+#	local idx="$1"; idx=${idx:-$(rootfs_current)}
+#	local dir=dir_rootfs${idx}
+#	echo "${!dir}"
+
 	local idx="$1"
 
-	if [[ -z "${idx}" || "${idx}" == "$(rootfs_current)" ]]; then
-		echo /
-	else
-		local dir=dir_rootfs${idx}; dir=${!dir}
+	if [[ -n "${idx}" && "${idx}" != "$(rootfs_current)" ]]; then
+		local dir=dir_rootfs${idx}
 
-		echo "${dir}"
+		echo ${!dir}
 	fi
 }
 
@@ -203,13 +205,15 @@ do_mount() {
 		# if have mounted, do nothing
 		#
 		echo "${dev} have mounted"
+
+		return
 	elif [[ "${dev}" != "$(dev_rootfs_current)" ]]; then
 		do_with_cb logger:echo_logger "fsck" \
 			"fsck.ext4 -p ${dev}"
-	else
-		do_with_cb logger:echo_logger "mount" \
-			"mount ${opt} ${opt_fixed} ${dev} ${dir}"
 	fi
+
+	do_with_cb logger:echo_logger "mount" \
+		"mount ${opt} ${opt_fixed} ${dev} ${dir}"
 }
 
 #
@@ -224,7 +228,11 @@ do_umount() {
 	fi
 }
 
-init_dev_sd() {
+mount_sd() {
+	wait_dev ${dev_sd} sd 2 || return $?
+
+	do_mount ${dev_sd} ${dir_sd}
+
 	#
 	# ptest MUST run front-end
 	#
@@ -237,18 +245,15 @@ init_dev_sd() {
 	fi
 }
 
-mount_sd() {
-	wait_dev ${dev_sd} sd 2 || return $?
-	do_mount ${dev_sd} ${dir_sd}
-
-	init_dev_sd
-}
-
 umount_sd() {
 	do_umount ${dev_sd}
 }
 
-init_dev_hd() {
+mount_hd() {
+	wait_dev ${dev_hd} hd 3 || return $?
+
+	do_mount ${dev_hd} ${dir_hd} || return $?
+
 	if [[ -d "${__CP_WEBSITE__}" ]]; then
 		chmod -R 777 ${__CP_WEBSITE__}
 	fi
@@ -258,26 +263,14 @@ init_dev_hd() {
 	usr/sbin/sysled sata on
 }
 
-mount_hd() {
-	wait_dev ${dev_hd} hd 3 || return $?
-	do_mount ${dev_hd} ${dir_hd} || return $?
-
-	init_dev_hd
-}
-
 umount_hd() {
 	do_umount ${dev_hd}
 }
 
-init_dev_usb() {
-	do_nothing
-}
-
 mount_usb() {
 	wait_dev ${dev_usb} usb 2 || return $?
-	do_mount ${dev_usb} ${dir_usb}
 
-	init_dev_usb
+	do_mount ${dev_usb} ${dir_usb} || return $?
 }
 
 umount_usb() {
@@ -324,10 +317,6 @@ remount_rootfs() {
 	fi
 }
 
-init_dev_rootfs() {
-	do_nothing
-}
-
 mount_rootfs() {
 	local idx
 	local current=$(rootfs_current)
@@ -335,9 +324,17 @@ mount_rootfs() {
 	#
 	# skip current rootfs
 	#
-	for ((idx=0; idx<3 && idx != current; idx++)); do
-		local dev=dev_rootfs${idx}; dev=${!dev}
-		local dir=dir_rootfs${idx}; dir=${!dir}
+	for ((idx=0; idx<3; idx++)); do
+		#
+		# cannot use as below
+		#   for ((idx=0; idx<3 && idx != current; idx++)); do
+		#
+		if ((idx == current)); then
+			continue
+		fi
+
+		local dev=$(rootfs_dev ${idx})
+		local dir=$(rootfs_dir ${idx})
 		local alias=rootfs${idx}
 
 		wait_dev ${dev} ${alias} 3 || {
@@ -347,15 +344,13 @@ mount_rootfs() {
 			continue
 		}
 
-		local opt
+		local opt="" #re-init to empty in loop
 		if ((0==idx)); then
 			opt="-r" # rootfs0 is readonly
 		fi
 
 		do_mount ${dev} ${dir} ${opt}
 	done
-
-	init_dev_rootfs
 }
 
 umount_rootfs() {
@@ -365,10 +360,12 @@ umount_rootfs() {
 	#
 	# skip current rootfs
 	#
-	for ((idx=0; idx<3 && idx != current; idx++)); do
-		local dev=dev_rootfs${idx}; dev=${!dev}
+	for ((idx=0; idx<3; idx++)); do
+		if ((idx == current)); then
+			continue
+		fi
 
-		do_umount ${dev}
+		do_umount $(rootfs_dev ${idx})
 	done
 }
 
@@ -403,7 +400,7 @@ opt2tftp() {
 	for opt in $(find ${dir_opt} -type d); do
 		local dir=$(sed "s#${dir_opt}#${dir_tftp}#" <<< ${opt})
 
-		mkdir -p ${dir}
+		MKDIR ${dir}
 	done
 }
 
@@ -475,8 +472,8 @@ umount_rootfs_data() {
 }
 
 mount_all() {
-	mount_rootfs
 	mount_rootfs_data
+	mount_rootfs
 	mount_sd
 	mount_hd
 	mount_usb
@@ -486,6 +483,6 @@ umount_all() {
 	umount_usb
 	umount_hd
 	umount_sd
-	umount_rootfs_data
 	umount_rootfs
+	umount_rootfs_data
 }

@@ -12,7 +12,7 @@
 upgrade_factory() {
 	local version=$1
 	local buddy=$(rootfs_buddy)
-	local dev=dev_rootfs${buddy}; dev=${!dev}
+	local dev=$(rootfs_dev ${buddy})
 	local err=0
 
 	upgrade_echo_logger ${FUNCNAME} \
