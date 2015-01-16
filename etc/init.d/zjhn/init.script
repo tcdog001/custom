@@ -1,18 +1,10 @@
 #!/bin/bash
 
 . /etc/upgrade/dir.in
-URL_PATH=/etc/platform/conf/platform.json
+. /etc/platform/bin/check_oem_function.sh
 
 log() {
 	echo_logger zjhn_init "$@"
-}
-
-check_oem_lms() {
-	local default_url="{\"url\":\"https://atbus.autelan.com:8443/LMS/lte/\"}"
-	local content_url=$(cat ${URL_PATH})
-
-	[[ ${default_url} != ${content_url} ]] && return 0
-	return 1
 }
 
 main() {

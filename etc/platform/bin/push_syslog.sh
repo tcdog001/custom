@@ -2,6 +2,7 @@
 
 . /etc/platform/bin/platform.in
 . /etc/upgrade/dir.in 
+. /etc/platform/bin/check_oem_function.sh
 
 declare -A logs
 declare -A functions
@@ -229,33 +230,40 @@ main() {
 	local signature=$(cat /etc/platform/conf/encrypt_data_sys.dat)
 	local output=/tmp/syslog.out
 
-	local file
-	for file in $(ls ${dir_backup_log}/sys-* | sort -r); do
-		local newname=$(basename ${file})
-		newname=${newname#sys-}
-		newname=${newname//:/-}
+	check_oem_lms; err=$?
+	if [[ ${err} = 0 ]]; then
+		rm -f ${dir_backup_log}/sys-* > /dev/null 2>&1
+		echo_logger "platform" "lms changed, cannot send syslog to upload1.9797168.com"
+		return 1
+	else
+		local file
+		for file in $(ls ${dir_backup_log}/sys-* | sort -r); do
+			local newname=$(basename ${file})
+			newname=${newname#sys-}
+			newname=${newname//:/-}
 
-		local status=$(curl -s \
-					--max-time 180 \
-					-F "type=sys" \
-					-F "signature=${signature}" \
-					-F "ident=${mac}" \
-					-F "content=@${file};filename=${newname};type=text/plain" \
-					-o ${output} \
-					-w  %{http_code} \
-					http://update1.9797168.com:821/wifibox/); err=$?
-		if [ "${status}" != "200" ]; then
-			echo_logger "platform" \
-				"ERROR[${err}]: upload ${file} failed"
-			return ${err}
-		elif [ "true" != "$(cat ${output} | jq -j '.success|booleans')" ]; then
-			echo_logger "platform" \
-				"upload ${file} failed"
-			return 1
-		fi
+			local status=$(curl -s \
+						--max-time 180 \
+						-F "type=sys" \
+						-F "signature=${signature}" \
+						-F "ident=${mac}" \
+						-F "content=@${file};filename=${newname};type=text/plain" \
+						-o ${output} \
+						-w  %{http_code} \
+						http://update1.9797168.com:821/wifibox/); err=$?
+			if [ "${status}" != "200" ]; then
+				echo_logger "platform" \
+					"ERROR[${err}]: upload ${file} failed"
+				return ${err}
+			elif [ "true" != "$(cat ${output} | jq -j '.success|booleans')" ]; then
+				echo_logger "platform" \
+					"upload ${file} failed"
+				return 1
+			fi
 
-		rm -f ${file} > /dev/null 2>&1
-	done
+			rm -f ${file} > /dev/null 2>&1
+		done
+	fi
 }
 
 main "$@"
