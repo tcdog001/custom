@@ -53,7 +53,10 @@ __check_plt_file() {
 }
 
 get_mac() {
-	cat $(get_plt_register) | jq -j '.mac|strings' | tr ":" "-"
+	local mac=$(cat $(get_plt_register) | jq -j '.mac|strings' | tr ":" "-")
+		  mac=${mac:-00-00-00-00-00-00}
+
+	echo ${mac}
 }
 
 get_json_mac() {
