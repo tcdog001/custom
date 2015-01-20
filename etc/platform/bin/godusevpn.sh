@@ -61,7 +61,7 @@ getnow() {
 log() {
 	local info="$*"
 
-	echo "$(now) ${info}" >> ${file_recover_log}
+	echo "$(getnow) ${info}" >> ${file_recover_log}
 }
 
 do_recover() {
@@ -139,11 +139,11 @@ do_recover() {
 	#step3: upload recover log
 	#
 	if [[ "yes" == "${upload}" ]]; then
-		local logfile="recover.$(getmac).$(getnow).status:${err}.log"
+		local logfile="recover.$(getmac).$(getnow).status:${error}.log"
 		for ((;;)); do
 			curl -u ${userpass} \
 				-T ${file_recover_log} \
-				${url}/CPE/lte/recover/${taskid}/${status}/${logfile} \
+				${url}/CPE/lte/recover/${taskid}/${logfile} \
 				2>/dev/null; err=$?
 			if ((0==err)); then
 				break
