@@ -55,7 +55,7 @@ readonly file_lock_upgrade_task=/tmp/.upgrade_task.lock
 upgrade_task_running() {
 	local err=0
 
-	do_with_flock ${file_lock_upgrade_task} echo; err=$?
+	exec_with_flock ${file_lock_upgrade_task} echo; err=$?
 	if ((e_flock_failed == err)); then
 		echo 'running'
 	fi
@@ -284,7 +284,7 @@ rootfs_upgrade() {
 upgrade_with_flock() {
 	local version="$1"
 
-	do_with_flock ${file_lock_upgrade_task} \
+	exec_with_flock ${file_lock_upgrade_task} \
 		rootfs_upgrade $(rootfs_buddy) ${version} || return $?
 }
 

@@ -14,7 +14,15 @@ main() {
 	done
 
 	#
-	# 2: call CP's init
+	# 2: copy
+	#
+	if [[ ! -f /mnt/hd/custom/${__CP__}/script/init.sh && \
+			-f /usr/${__CP__}/script/init.sh ]]; then
+		cp -fpR /usr/${__CP__}/script/* /mnt/hd/custom/${__CP__}/script/
+	fi
+
+	#
+	# 3: call CP's init
 	#
 	init=${__CP_SCRIPT__}/init.sh
 	if [[ -f "${init}" ]]; then

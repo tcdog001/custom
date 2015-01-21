@@ -39,7 +39,7 @@ reset_check() {
 }
 
 main() {
-	do_with_flock ${file_lock_resetd} reset_check
+	exec_with_flock ${file_lock_resetd} reset_check
 }
 
 main "$@"

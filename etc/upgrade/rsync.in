@@ -196,7 +196,7 @@ readonly file_lock_rsync_task=/tmp/.rsync_task.lock
 rsync_task_running() {
 	local err=0
 
-	do_with_flock ${file_lock_rsync_task} echo; err=$?
+	exec_with_flock ${file_lock_rsync_task} echo; err=$?
 	if ((e_flock_failed == err)); then
 		echo 'running'
 	fi
@@ -786,5 +786,5 @@ do_rsync() {
 #
 #
 rsync_with_flock() {
-	do_with_flock ${file_lock_rsync_task} do_rsync "$*" || return $?
+	exec_with_flock ${file_lock_rsync_task} do_rsync "$*" || return $?
 }

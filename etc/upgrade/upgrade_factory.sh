@@ -55,7 +55,7 @@ main() {
 		#
 		# upgrade failed, try upgrade by dd
 		#
-		do_with_flock ${file_lock_upgrade_task} \
+		exec_with_flock ${file_lock_upgrade_task} \
 			upgrade_factory ${version}
 	else
 		upgrade_echo_logger "upgrade_factory" \

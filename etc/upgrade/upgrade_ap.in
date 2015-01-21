@@ -100,7 +100,7 @@ upgrade_ap() {
 upgrade_ap_with_flock() {
 	local prefix=$1
 
-	do_with_flock ${file_lock_upgrade_ap} upgrade_ap ${prefix} || return $?
+	exec_with_flock ${file_lock_upgrade_ap} upgrade_ap ${prefix} || return $?
 }
 
 handshake_version() {
@@ -138,5 +138,5 @@ handshake_version() {
 }
 
 handshake_version_with_flock() {
-	do_with_flock ${file_lock_upgrade_ap} handshake_version || return $?
+	exec_with_flock ${file_lock_upgrade_ap} handshake_version || return $?
 }
