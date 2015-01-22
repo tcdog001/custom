@@ -9,6 +9,7 @@ URL_DEFAULT=https://atbus.9797168.com:8443/LMS/lte/
 COOKIE_FILE=/tmp/registerCookie.txt
 PAGE=lteRegister.do
 RESULT_FILE=/tmp/registerResult.txt
+CURLE_OK=0
 CURLE_COULDNT_CONNECT=7
 CURLE_COULDNT_RESOLVE_HOST=6
 RECONNECTION_INTERVAL=5
@@ -34,7 +35,8 @@ if [ -f $FILE_REGISTER ];then
 		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d @$FILE_REGISTER -s  -c $COOKIE_FILE  $url > $RESULT_FILE
 		response=$?
 		echo response=$response
-		if [ $response -eq $CURLE_COULDNT_CONNECT ] || [ $response -eq $CURLE_COULDNT_RESOLVE_HOST ];then
+#		if [ $response -eq $CURLE_COULDNT_CONNECT ] || [ $response -eq $CURLE_COULDNT_RESOLVE_HOST ];then
+		if [ $response != $CURLE_OK ]; then
 			sleep $RECONNECTION_INTERVAL
 		else
 			break
