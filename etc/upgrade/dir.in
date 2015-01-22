@@ -254,11 +254,15 @@ mount_hd() {
 
 	do_mount ${dev_hd} ${dir_hd} || return $?
 
-	if [[ -d "${__CP_WEBSITE__}" ]]; then
-		chmod -R 777 ${__CP_WEBSITE__}
+	if [[ -d "${dir_custom_website}" ]]; then
+		chmod -R 777 ${dir_custom_website}
 	fi
 
 	setup_dir_with_prefix dir_ ${dir_hd}
+	#
+	# link /mnt/hd/custom/${__CP__} to /data/${__CP__}
+	#
+	LN_DIR ${dir_custom} ${__CP_HOME__}
 
 	usr/sbin/sysled sata on
 }
@@ -406,11 +410,6 @@ opt2tftp() {
 
 setup_data_dir() {
 	setup_dir_with_prefix dir_ ${dir_rootfs_data}
-
-	#
-	# link /mnt/hd/custom/${__CP__} to /data/${__CP__}
-	#
-	LN_DIR ${dir_custom} ${__CP_HOME__}
 }
 
 setup_tmp_dir() {

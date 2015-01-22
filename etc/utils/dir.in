@@ -36,9 +36,11 @@ readonly dir_tftp=/tmp/tftp
 readonly dir_status=/tmp/status
 readonly dir_plt=/tmp/plt
 readonly dir_plt_syslog=${dir_plt}/syslog
-readonly dir_website=${dir_hd}/website
+readonly file_plt_cache=${dir_plt}/.plt.cache
+
 readonly dir_website_upgrade=${dir_hd}/website_upgrade
 readonly dir_website_config=${dir_hd}/website_config
+readonly file_website_config=${dir_website_config}/website.conf
 
 #
 #don't remove it
@@ -56,12 +58,9 @@ readonly dir_website_config=${dir_hd}/website_config
 # for third-part(custom dir)
 #
 readonly dir_custom=${dir_hd}/custom/${__CP__}
+readonly dir_custom_website=${dir_custom}/www
 readonly dir_custom_script=${dir_custom}/script
-
 readonly dir_tmp_custom=${__CP_TEMP__}
-
-readonly file_plt_cache=${dir_plt}/.plt.cache
-readonly file_website_config=${dir_website_config}/website.conf
 
 readonly file_status_3g=${dir_status}/3g
 readonly file_status_5g=${dir_status}/5g

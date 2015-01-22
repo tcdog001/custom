@@ -17,7 +17,7 @@ get_cp_dir_script() {
 }
 
 get_cp_dir_website() {
-	echo /mnt/hd/website
+	echo $(get_cp_dir_home)/www
 }
 
 get_cp_dir_log_gps() {
