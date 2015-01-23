@@ -16,6 +16,7 @@ sync_3gstat() {
 	local DOWN=down
 	local UP=up
 	local status_FILE=/tmp/status/3g_status
+	local zjhn_status_FILE=/tmp/zjhn/3gstatus
 	local AP_status_file=/tmp/.ppp/status
 	local md3gstat=$( cat ${status_FILE} 2>/dev/null )
 	local ap3gstat=$( /etc/jsock/jcmd.sh syn "cat ${AP_status_file}" 2>/dev/null )
@@ -31,9 +32,11 @@ sync_3gstat() {
 			if [[ "${ap3gstat}" == "${UP}" ]];then
 				. /etc/jsock/msg/3g_up.system.cb  2>/dev/null
 				echo "${UP}" >${status_FILE}
+				echo "0" > ${zjhn_status_FILE}
 			else
 				. /etc/jsock/msg/3g_down.system.cb  2>/dev/null
 				echo "${DOWN}" >${status_FILE}
+				echo "3" > ${zjhn_status_FILE}
 			fi
 		fi
 	fi
