@@ -57,10 +57,10 @@ readonly file_website_config=${dir_website_config}/website.conf
 #
 # for third-part(custom dir)
 #
-readonly dir_custom=${dir_hd}/custom/${__CP__}
-readonly dir_custom_website=${dir_custom}/www
-readonly dir_custom_script=${dir_custom}/script
-readonly dir_tmp_custom=${__CP_TEMP__}
+readonly dir_cp=${dir_hd}/${__CP__}
+readonly dir_cp_website=${dir_cp}/www
+readonly dir_cp_script=${dir_cp}/script
+readonly dir_tmp_cp=${__CP_TEMP__}
 
 readonly file_status_3g=${dir_status}/3g
 readonly file_status_5g=${dir_status}/5g

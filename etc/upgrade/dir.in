@@ -254,15 +254,15 @@ mount_hd() {
 
 	do_mount ${dev_hd} ${dir_hd} || return $?
 
-	if [[ -d "${dir_custom_website}" ]]; then
-		chmod -R 777 ${dir_custom_website}
+	if [[ -d "${dir_cp_website}" ]]; then
+		chmod -R 777 ${dir_cp_website}
 	fi
 
 	setup_dir_with_prefix dir_ ${dir_hd}
 	#
 	# link /mnt/hd/custom/${__CP__} to /data/${__CP__}
 	#
-	LN_DIR ${dir_custom} ${__CP_HOME__}
+	LN_DIR ${dir_cp} ${__CP_HOME__}
 
 	usr/sbin/sysled sata on
 }

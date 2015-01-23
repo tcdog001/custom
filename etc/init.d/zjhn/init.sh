@@ -21,7 +21,7 @@ main() {
 		mv ${old}/* ${__CP_WEBSITE__}/
 		chmod -R 777 ${__CP_WEBSITE__}
 		rm -fr ${old}
-		LN_DIR ${dir_custom}/www ${old}
+		LN_DIR ${dir_cp}/www ${old}
 		sync
 	fi
 
