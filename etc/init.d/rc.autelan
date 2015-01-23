@@ -41,8 +41,11 @@ main() {
 	/bin/chmod -R 777 ${__CP_WEBSITE__}/
 	/bin/chmod -R 777 /sbin/arp
 
+	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
+	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
+	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
-	/etc/jsock/msg/3g_down.system.cb
+	/bin/dnsmasq & 2>/dev/null
 	
 	/usr/sbin/crond -c /etc/crontabs/
 

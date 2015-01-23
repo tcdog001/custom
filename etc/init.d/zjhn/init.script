@@ -1,18 +1,9 @@
 #!/bin/bash
 
 . /etc/upgrade/dir.in
-URL_PATH=/etc/platform/conf/platform.json
 
 log() {
 	echo_logger zjhn_init "$@"
-}
-
-check_oem_lms() {
-	local default_url="{\"url\":\"https://atbus.autelan.com:8443/LMS/lte/\"}"
-	local content_url=$(cat ${URL_PATH})
-
-	[[ ${default_url} != ${content_url} ]] && return 0
-	return 1
 }
 
 main() {
@@ -20,10 +11,7 @@ main() {
 	local err=0
 	local url
 	local upload
-	
-	check_oem_lms; err=$?
-	[[ ${err} = 0 ]] && return ${err}
-	
+
 	url="http://data.9797168.com:8080/update/get_switch"
 	upload=$(curl -d mac=".${mac}." ${url}); err=$?
 	if ((0!=err)); then

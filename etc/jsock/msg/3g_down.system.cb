@@ -11,24 +11,21 @@ main() {
     local body="$*"
     local self="$(basename $0)"
 
-    jsock_md_recive_check || {
-        return ${e_bad_board}
-    }
+	jsock_md_recive_check || {
+		return ${e_bad_board}
+	}
 
-    #echo ${LINK_DOWN} > ${file_status_3g}
+    echo ${LINK_DOWN} > ${file_status_3g}
 
     jmsg_logger "recive message:${self%%.*}, body:${body}"
-
-    local dnsmasq_file=/etc/dnsmasq.conf
-    local dnsmasq_down="address=/#/1.1.1.1"
-    local dnsmasq_get=$(sed -n '/address=\/#/p' ${dnsmasq_file})
-    
-    if [[ ${dnsmasq_get} != ${dnsmasq_down} ]]; then
-        sed -i '/1.1.1.1$/d' ${dnsmasq_file}
-        echo "${dnsmasq_down}" >> ${dnsmasq_file} 
-        /usr/bin/killall dnsmasq 2>/dev/null
-        /bin/dnsmasq & 2>/dev/null
-    fi
+#    echo "recive message:${self%%.*}, body:${body}" >> /tmp/mytest.log
+#   mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null
+    /bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
+    /bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
+#   /bin/chmod 777 /etc/dnsmasq.conf.bak 2>/dev/null
+    /bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
+    /usr/bin/killall dnsmasq 2>/dev/null
+    /bin/dnsmasq & 2>/dev/null
 }
 
 main "$@"
