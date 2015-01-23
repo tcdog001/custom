@@ -29,6 +29,6 @@ function getMac($ip)
 
 **/
 function enable_address($mac) {
-		$shell = "sudo /sbin/iptables -t mangle -A WiFiDog_eth0.1_Trusted -m mac --mac-source $mac -j MARK --set-mark 2 ";
+		$shell = "sudo /usr/sbin/usr_certificate.sh $mac & ";
 		exec($shell, $res);
 }
