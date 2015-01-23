@@ -10,7 +10,9 @@ write_time_status() {
 	cat "${ARP_FLIE}" | while read line
 		do
 			local ip=$(echo "$line" | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
-			echo "${ip} 2" >> "${ZJHN_USERSTATUES}"
+			if [ -n ${ip} ]; then
+				echo "${ip} 2" >> "${ZJHN_USERSTATUES}"
+			fi
 		done
 }
 
