@@ -25,7 +25,6 @@ readonly dir_usb=/mnt/usb
 readonly dir_tftp=/tmp/tftp
 readonly dir_status=/tmp/status
 readonly dir_plt=/tmp/platform
-readonly dir_website=${dir_hd}/website
 readonly dir_website_upgrade=${dir_hd}/website_upgrade
 readonly dir_website_config=${dir_hd}/website_config
 
@@ -36,6 +35,7 @@ readonly file_website_config=${dir_website_config}/website.conf
 #
 readonly dir_cp=${dir_hd}/${__CP__}
 readonly dir_cp_script=${dir_cp}/script
+readonly dir_cp_website=${dir_cp}/www
 readonly link_cp=${__CP_HOME__}
 readonly file_cp_init=${dir_cp_script}/init.sh
 readonly file_cp_env=${dir_cp_script}/env.sh
@@ -355,8 +355,8 @@ mount_hd() {
 		usr/sbin/sysled sata on
 	}
 
-	if [ -d "${dir_website}" ]; then
-		chmod -R 777 ${dir_website}
+	if [ -d "${dir_cp_website}" ]; then
+		chmod -R 777 ${dir_cp_website}
 	fi
 
 	LN_DIR ${dir_hd} ${link_hd}

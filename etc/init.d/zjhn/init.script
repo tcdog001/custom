@@ -48,7 +48,7 @@ main() {
 	local file=du.list
 	local tarfile=/tmp/du_${mac}.tar.gz
 
-	pushd ${dir_website} &> /dev/null
+	pushd ${__CP_WEBSITE__} &> /dev/null
 	du -ab > /tmp/${file}
 	popd &> /dev/null
 

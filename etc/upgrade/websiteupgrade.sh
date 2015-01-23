@@ -30,7 +30,7 @@ website_rsync() {
 }
 
 website_local_version() {
-	local file=${dir_website}/ver.info
+	local file=${__CP_WEBSITE__}/ver.info
 
 	if [[ -f ${file} ]]; then
 		cat ${file}
@@ -80,7 +80,7 @@ website_upgrade() {
 	# do upgrade
 	#
 	website_rsync /opt/version/lte-fi/website/${version} ${dir_website_upgrade} || return $?
-	cp -fpR ${dir_website_upgrade}/* ${dir_website}; sync
+	cp -fpR ${dir_website_upgrade}/* ${__CP_WEBSITE__}; sync
 }
 
 main() {

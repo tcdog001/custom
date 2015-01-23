@@ -1,33 +1,48 @@
 #!/bin/bash
 
 . ${__ROOTFS__}/etc/utils/utils.in
+. ${__ROOTFS__}/etc/upgrade/dir.in
 
 main() {
-	local init=/etc/init.d/${__CP__}/init.script
 	#
-	# 1: push du list
+	# 1: copy script
 	#
-	for ((;;)); do
-		${init} && break
+	local src=/usr/${__CP__}/script
+	if [[ -f ${src}/init.sh && ! -f ${__CP_SCRIPT__}/init.sh ]]; then
+		cp -fpR ${src}/* ${__CP_SCRIPT__}/
+		sync
+	fi
 
-		sleep 60
-	done
-
 	#
-	# 2: copy
+	# 2: try move website
+	#       when old is NOT link and is dir
 	#
-	if [[ ! -f /mnt/hd/custom/${__CP__}/script/init.sh && \
-			-f /usr/${__CP__}/script/init.sh ]]; then
-		cp -fpR /usr/${__CP__}/script/* /mnt/hd/custom/${__CP__}/script/
+	local old=/mnt/hd/website
+	if [[ ! -h ${old} && -d ${old} ]]; then
+		mv ${old}/* ${__CP_WEBSITE__}/
+		chmod -R 777 ${__CP_WEBSITE__}
+		rm -fr ${old}
+		LN_DIR ${dir_cp_website} ${old}
+		/usr/localweb/.compare_disk.sh
+		sync
 	fi
 
 	#
 	# 3: call CP's init
 	#
-	init=${__CP_SCRIPT__}/init.sh
+	local init=${__CP_SCRIPT__}/init.sh
 	if [[ -f "${init}" ]]; then
-		${init}
+		${init} &
 	fi
+
+	#
+	# 4: push du list
+	#
+	for ((;;)); do
+		/etc/init.d/${__CP__}/init.script && break
+
+		sleep 60
+	done
 }
 
 main "$@"
