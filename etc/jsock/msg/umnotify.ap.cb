@@ -51,7 +51,7 @@ main() {
 	#
 	# call um method
 	#
-	ubus call user-manage ${event} "${message}"
+	ubus call user-manage "${event}" "${message}"
 }
 
 main "$@"

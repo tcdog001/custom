@@ -21,6 +21,8 @@ set_user() {
 }
 
 #
+# call by um
+#
 #$1:event
 #$2:ifname
 #$3:mac
