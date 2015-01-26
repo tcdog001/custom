@@ -19,10 +19,18 @@ main() {
 	#
 	local old=/mnt/hd/website
 	if [[ ! -h ${old} && -d ${old} ]]; then
-		mv ${old}/* ${__CP_WEBSITE__}/
-		chmod -R 777 ${__CP_WEBSITE__}
-		rm -fr ${old}
-		LN_DIR ${dir_cp_website} ${old}
+		if [ ! -d "${__CP_WEBSITE__}" ]; then
+			mkdir -p ${__CP_WEBSITE__}
+			sync
+		fi
+		mv ${old}/* ${__CP_WEBSITE__}/; err=$?
+		sync
+		if ((0==err)); then
+			chmod -R 777 ${__CP_WEBSITE__}
+			rm -fr ${old}
+			LN_DIR ${dir_cp_website} ${old}
+			sync
+		fi
 		/usr/localweb/.compare_disk.sh
 		sync
 	fi

@@ -365,6 +365,7 @@ mount_hd() {
 		${dir_website_upgrade} \
 		${dir_website_config} \
 		${dir_cp_script} \
+		${dir_cp_website} \
 		${dir_tmp_cp}
 }
 
