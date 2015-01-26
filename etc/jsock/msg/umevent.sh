@@ -46,7 +46,17 @@ main() {
 		# do nothing, now
 		#
 		;;
-	bind | unbind | auth)
+	bind)
+		#
+		# todo: setup tc rule
+		#
+		;;
+	unbind)
+		#
+		# todo: delete tc rule
+		#
+		;;
+	auth)
 		#
 		# first on md, so do nothing
 		#
