@@ -7,11 +7,12 @@ main() {
 	#
 	# 1: copy script
 	#
-	local src=/usr/${__CP__}/script
-	if [[ -f ${src}/init.sh && ! -f ${__CP_SCRIPT__}/init.sh ]]; then
-		cp -fpR ${src}/* ${__CP_SCRIPT__}/
-		sync
-	fi
+	#local src=/usr/${__CP__}/script
+	#if [[ -f ${src}/init.sh && ! -f ${__CP_SCRIPT__}/init.sh ]]; then
+	#	cp -fpR ${src}/* ${__CP_SCRIPT__}/
+	#	sync
+	#fi
+	/usr/${__CP__}/script/compare_cp.sh
 
 	#
 	# 2: try move website
