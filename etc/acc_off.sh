@@ -14,7 +14,7 @@ get_onoff_log() {
 		sed -e "1,${del_line}"d ${ontime_file} -i 2>/dev/null
 	fi
 
-	printf '{"ontime":"%s","offtime":"%s","offreason":"%s"}' \
+	printf '{"ontime":"%s","offtime":"%s","offreason":"%s"}\n' \
 		"${ontime}"  \
 		"${offtime}" \
 		"ACC-OFF" > ${file_path}/on-off-${offtime}
