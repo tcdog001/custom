@@ -13,7 +13,11 @@ get_onoff_log() {
 	if [[ ${line} -gt 2 ]];then
 		sed -e "1,${del_line}"d ${ontime_file} -i 2>/dev/null
 	fi
-	echo "{\"ontime\":\"${ontime}\",\"offtime:\"${offtime}\",\"offreason\":\"ACC-OFF\"}" >${file_path}/on-off-${offtime}
+
+	printf '{"ontime":"%s","offtime":"%s","offreason":"%s"}' \
+		"${ontime}"  \
+		"${offtime}" \
+		"ACC-OFF" > ${file_path}/on-off-${offtime}
 }
 main() {
 	/usr/sbin/sysled sata off                                         
