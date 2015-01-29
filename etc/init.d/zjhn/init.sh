@@ -13,9 +13,9 @@ main() {
 	#  push du list
 	#
 	for ((;;)); do
+		sleep 60
 		${init} && break
 
-		sleep 60
 	done
 
 }
