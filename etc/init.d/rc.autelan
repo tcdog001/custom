@@ -38,7 +38,6 @@ main() {
 	/bin/chmod 777 /sbin/sudo
 	/bin/chmod u+s /sbin/sudo
 	/bin/chmod -R 777 /mnt/hd/website/
-	/bin/chmod -R 777 ${__CP_WEBSITE__}/
 	/bin/chmod -R 777 /sbin/arp
 
 	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
