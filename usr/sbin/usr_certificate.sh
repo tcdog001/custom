@@ -16,7 +16,6 @@ change_time_status() {
 write_white_list() {
 	local mac=$1
 	local mac_arp=$(echo "${mac}" | tr '[A-Z]' '[a-z]')
-	local ip=$(/sbin/arp | grep "192.168.0." | grep ${mac_arp} | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
 	local status_lock="/tmp/zjhn_status.lock"
 	local mac_ipt=$(echo "${mac}" | tr '[a-z]' '[A-Z]')
 	
@@ -26,6 +25,7 @@ write_white_list() {
 		
 		{
 		flock -w 10 3 && {
+			local ip=$(/sbin/arp | grep "192.168.0." | grep ${mac_arp} | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
 			change_time_status "0" "${ip}"
 			}
 		} 3<>${status_lock}
