@@ -80,6 +80,7 @@ website_upgrade() {
 	#
 	# read config
 	#
+	dos2unit ${file_website_config}
 	local version=$(website_upgrade_version \
 						$(< ${__CP_WEBSITE__}/ver.info) \
 						${file_website_config}) || return $?
@@ -97,12 +98,10 @@ website_upgrade() {
 }
 
 main() {
-
-	while :
-	do
-		website_upgrade && return
-
+	for ((;;)); do
 		sleep 600
+
+		website_upgrade && return
 	done
 }
 
