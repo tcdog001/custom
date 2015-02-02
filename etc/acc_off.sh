@@ -10,10 +10,6 @@ get_onoff_log() {
 	local line=$( grep -n "" ${ontime_file} |wc -l )
 	local del_line=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
 
-	if [[ ${line} -gt 2 ]];then
-		sed -e "1,${del_line}"d ${ontime_file} -i 2>/dev/null
-	fi
-
 	printf '{"ontime":"%s","offtime":"%s","offreason":"%s"}\n' \
 		"${ontime}"  \
 		"${offtime}" \
