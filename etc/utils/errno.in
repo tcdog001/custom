@@ -58,7 +58,8 @@ readonly e_dom=33		# /* Math argument out of domain of func */
 readonly e_range=34		# /* Math result not representable */
 readonly e_perm=35	  	# /* Operation not permitted */
 readonly e_noent=35	 	# /* No such file or directory */
-readonly e_toomore		# private
+readonly e_toomore=36   # private
+readonly e_noeq=37
 
 readonly e_nosupport=40
 readonly e_bad_board=41

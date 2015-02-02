@@ -275,3 +275,15 @@ delete_file_line_byvalue() {
 	#
 	sed -i "s#${value}#${replace}#g;/${replace}/d" ${file}
 }
+
+#
+#$1:file
+#
+get_file_md5() {
+	local file="$1"
+	local md5 _
+
+	read md5 _ <<< $(md5sum ${file})
+
+	echo ${md5}
+}

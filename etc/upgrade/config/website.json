@@ -1,0 +1,9 @@
+{
+	"server":"lms9.autelan.com",
+	"port":"873",
+	"user":"rsync",
+	"pass":"rsync4GOOD!",
+	"remote":"/opt/version/lte-fi/website",
+
+	"timeout":300
+}

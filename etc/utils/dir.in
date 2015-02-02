@@ -118,6 +118,7 @@ readonly dir_config_php=${dir_config}/php
 readonly dir_config_plt=${dir_config}/plt
 readonly dir_config_fagent=${dir_config}/fagent
 readonly dir_config_stimer=${dir_config}/stimer
+readonly dir_config_upgrade=${dir_config}/upgrade
 
 #
 # backup dir

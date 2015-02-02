@@ -236,3 +236,58 @@ __json_to_aa() {
 json_to_aa() {
 	__json_to_aa _ "$@"
 }
+
+
+#
+#$1:json a
+#$2:json b
+#
+json_eq() {
+	local json="$1"
+	local json2="$2"
+
+	local keys=$(echo ${json} | jq -j 'keys') || return $?
+	local count=$(echo ${keys} | jq -j '.|length')
+
+	local i
+	for ((i=0; i<count; i++)); do
+		local name=$(echo ${keys} | jq -j ".[${i}]")
+		local type=$(echo ${json} | jq -j ".${name} | type")
+		local value=$(echo ${json} | jq -j ".${name} | ${type}s")
+		local value2=$(echo ${json2} | jq -j ".${name} | ${type}s")
+
+		case ${type} in
+		null | number | boolean | string)
+			if [[ "${value} != ${value2}" ]]; then
+				return ${e_noeq}
+			fi
+			;;
+		array | object)
+			json_eq "${value}" "${value2}" || return $?
+			;;
+		*)
+			return ${e_bad_json}
+			;;
+		esac
+	done
+}
+
+#
+#$1:deft associative array
+#$2:associative array
+#$3:json...
+#
+json_to_aa_with_deft() {
+	local deft="$1"
+	local aa="$2"; shift 2
+	local json="$*"
+
+	json_to_aa "${aa}" "${json}"
+
+	local key value
+	for key in $(aa_keys ${deft}); do
+		if [[ -z "$(aa_get ${aa} ${key})" ]]; then
+			aa_set ${aa} ${key} "$(aa_get ${deft} ${key})"
+		fi
+	done
+}
