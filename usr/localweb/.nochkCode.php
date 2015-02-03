@@ -29,6 +29,6 @@ function getMac($ip)
 
 **/
 function enable_address($mac) {
-		$shell = "sudo /usr/sbin/usr_certificate.sh $mac & ";
+		$shell = "sudo /data/app/etc/um/usr_certificate.sh $mac & ";
 		exec($shell, $res);
 }
