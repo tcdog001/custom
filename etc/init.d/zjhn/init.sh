@@ -8,6 +8,8 @@ main() {
 	/usr/localweb/.compare_disk.sh
 	sync
 	
+	/etc/um/compare_cp_file.sh
+	sync
 
 	#
 	#  push du list
