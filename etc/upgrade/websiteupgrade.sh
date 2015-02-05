@@ -58,22 +58,26 @@ website_version() {
 }
 
 website_upgrade() {
-	#
-	# get config
-	#
-	website_rsync /opt/version/lte-fi/website/website_config ${dir_website_config} || return $?
-	if [[ ! -f "${file_website_config}" ]]; then
-		logger "website" "no found ${file_website_config}"
+	local version="$1"
 
-		return
-	fi
-
-	#
-	# read config
-	#
-	local version=$(website_version) || return $?
 	if [[ -z "${version}" ]]; then
-		return
+		#
+		# get config
+		#
+		website_rsync /opt/version/lte-fi/website/website_config ${dir_website_config} || return $?
+		if [[ ! -f "${file_website_config}" ]]; then
+			logger "website" "no found ${file_website_config}"
+	
+			return
+		fi
+	
+		#
+		# read config
+		#
+		version=$(website_version) || return $?
+		if [[ -z "${version}" ]]; then
+			return
+		fi
 	fi
 
 	#
@@ -84,12 +88,13 @@ website_upgrade() {
 }
 
 main() {
+	local version="$1"
 	local err=0
 
 	sleep 60
 
 	for ((;;)); do
-		website_upgrade && return
+		website_upgrade "${version}" && return
 
 		sleep 300
 	done
