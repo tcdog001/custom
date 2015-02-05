@@ -259,8 +259,11 @@ do_mount() {
 		return ${e_noexist}
 	}
 
-	fsck.ext4 -p ${dev}
-	echo_logger "fsck" "OK: fsck.ext4 -p ${dev}"
+	local dev_current=dev_rootfs$(rootfs_current)
+	if [[ "${dev}" != "${!dev_current}" ]]; then
+		fsck.ext4 -p ${dev}
+		echo_logger "fsck" "OK: fsck.ext4 -p ${dev}"
+	fi
 
 	local err=0
 	local times=0
