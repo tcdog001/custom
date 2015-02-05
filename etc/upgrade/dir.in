@@ -259,6 +259,9 @@ do_mount() {
 		return ${e_noexist}
 	}
 
+	fsck.ext4 -p ${dev}
+	echo_logger "fsck" "OK: fsck.ext4 -p ${dev}"
+
 	local err=0
 	local times=0
 	local action="mount ${opt} ${option} ${dev} ${dir}"
