@@ -6,7 +6,7 @@ readonly -A deft_website=(
 	[server]=lms9.autelan.com
 	[port]=873
 	[user]=rsync
-	[pass]="rsync4GOOD!"
+	[pass]=ltefi@Autelan1
 	[remote]=/opt/version/lte-fi/website
 	[timeout]=300
 )

@@ -3,7 +3,7 @@
 . ${__ROOTFS__}/etc/upgrade/upgrade.in
 
 main() {
-	${__ROOTFS__}/usr/sbin/resetd &
+#	${__ROOTFS__}/usr/sbin/resetd &
 	${__ROOTFS__}/etc/platform/bin/godusevpn.sh &
 
 	__PLATFORM_CONFIG__=/etc/platform/conf/.platform.json \
