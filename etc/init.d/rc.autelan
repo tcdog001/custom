@@ -41,6 +41,7 @@ main() {
 	/bin/chmod -R 777 /sbin/arp
 
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
+	/bin/dnsmasq 2>/dev/null &
 	/etc/jsock/msg/3g_down.system.cb
 	
 	/usr/sbin/crond -c /etc/crontabs/
