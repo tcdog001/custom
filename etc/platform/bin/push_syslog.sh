@@ -145,9 +145,9 @@ get_onoff_log() {
 #functions[on-off.log]=get_onoff_log
 
 get_flow_user_log() {
-	do_nothing
+	get_private_log ${dir_opt_log_flow_user} uv_time_flow.log	
 }
-#functions[uv_time_flow.log]=get_flow_user_log
+functions[uv_time_flow.log]=get_flow_user_log
 
 get_flow_3g_log() {
 	do_nothing

@@ -1,46 +1,54 @@
 #!/bin/bash
 
 . /etc/platform/bin/platform.in
+. /etc/utils/utils.in
 
-x=""
+gps_upload() {
 
-GPS_LOG_PATH="/opt/log/gps/"
-GPS_LOG="/tmp/gps_out.log"
-#TEMP_GPS_LOG_PATH="/opt/log/gps/temp_gps.log"
-GPS_EN="/etc/platform/conf/gps_en"
+	local GPS_LOG=/tmp/gps_out.log
+	local GPS_EN=/etc/platform/conf/gps_en
+	local MAC=$(cat ${FILE_REGISTER} | jq -j ".mac" | tr  ":" "-")
+	local status info
 
-MAC=$(cat ${FILE_REGISTER} | jq -j ".mac" | tr  ":" "-")
-
-i=0
-for file in $(ls ${GPS_LOG_PATH} |grep gps-)
+for upload in $(ls /opt/log/gps/gps-* | sort -r) 
 do
-        file_name[$i]=$file
-        i=`expr $i+1`
-done
-
-for upload in ${file_name[*]}
-do
-	if [ -f ${GPS_LOG} ];then
-        	rm ${GPS_LOG}
-	fi
-        x=$(cat ${GPS_EN})
-        gps_data=$(cat ${GPS_LOG_PATH}${upload})
-        status=`curl --max-time 180  -F "type=gps" -F "signature=${x}" -F "ident=${MAC}" -F "content=${gps_data}"  -o  ${GPS_LOG} -s -w  %{http_code}   http://update1.9797168.com:821/wifibox/`
-        if [ $status -eq "200" ];then
+	status=$(curl --max-time 180  \
+		-F "type=gps" \
+		-F "signature=$(cat ${GPS_EN})" \
+		-F "ident=${MAC}" \
+		-F "content=$(cat ${upload})"  \
+		-o  ${GPS_LOG} \
+		-s \
+		-w  %{http_code}  \
+		http://update1.9797168.com:821/wifibox/)
+        if [ "$status" -eq "200" ];then
                 outcontent=$(cat ${GPS_LOG} | jq -j ".success")
-		if [ ${outcontent} == "false" ];then
-			echo "${upload} GPS log upload error !---time is:"`date` >>/tmp/error.log
-			break
-		elif [ ${outcontent} == "true" ];then
-			rm  ${GPS_LOG_PATH}${upload}
-                        echo "${upload} GPS log upload success !---time is:"`date`>>/tmp/error.log
-		else
-			echo "${upload} Unknown status !---time is:"`date`>>/tmp/error.log
-			break
-		fi
-        else
-                 echo "Network have some unknown problems !---time is:"`date`>>/tmp/error.log
-        	break
+		case ${outcontent} in
+		ture)
+			info="ok"
+			;;
+		false)
+			info="failed"
+			;;
+		*)
+			info="error"
+			;;
+		esac
+		
+		echo "$(getnow) upload ${upload} ${info}" >> ${GPS_LOG}
+
+		rm -f ${upload}
+	else
+		echo "$(getnow) upload ${upload} status=${status}" >> ${GPS_LOG}
 	fi
+	
+	sleep 1
 done
+}
+
+main() {
+	exec_with_flock	/tmp/.gps_upload.lock gps_upload
+}
+
+main "$@"
 
