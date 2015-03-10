@@ -171,6 +171,14 @@ json_add() {
 }
 
 #
+#$1:json
+#$3:key
+#
+json_del() {
+	echo $(__json_add "$@" /)
+}
+
+#
 #$1:associative array
 #
 json_from_aa() {

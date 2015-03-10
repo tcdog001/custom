@@ -19,16 +19,6 @@ main() {
 		return ${e_bad_json}
 	fi
 
-	local mac=$(echo ${body} | jq -j ".mac|strings")
-	if [[ -z "${mac}" ]]; then
-		return ${e_bad_json}
-	fi
-
-	local ip=$(echo ${body} | jq -j ".ip|strings")
-	if [[ -z "${ip}" ]]; then
-		return ${e_bad_json}
-	fi
-
 	local ifname message
 
 	case ${event} in
@@ -38,10 +28,10 @@ main() {
 		#
 		ifname="wlan0-1"
 
-		message=$(printf '{"mac":"%s","ip":"%s","ifname":"%s"}' ${mac} ${ip} ${ifname})
+		message=$(json_add ${body} ifname "${ifname}")
 		;;
 	unbind | auth | deauth)
-		message=$(printf '{"mac":"%s"}' ${mac})
+		message="${body}"
 		;;
 	*)
 		return ${e_inval}

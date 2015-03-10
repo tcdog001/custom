@@ -8,6 +8,7 @@
 #$1:event
 #$2:mac
 #$3:ip
+#[$4:class]
 #
 main() {
 	jsock_md_send_check || {
@@ -17,11 +18,15 @@ main() {
 	local event="$1"
 	local mac="$2"
 	local ip="$3"
+	local class="$4"
 
-	local json=$(printf '{"event":"%s","mac":"%s","ip":"%s"}' \
-		"${event}" \
-		"${mac}" \
-		"${ip}")
+	local json=$(json_create_bykvs \
+					event "${event}" \
+					mac "${mac}" \
+					ip "${ip}")
+	if [[ "auth" == "${event}" && -n "${class}" ]]; then
+		json=$(json_add "${json}" class "${class}")
+	fi
 
 	${__ROOTFS__}/etc/jsock/jmsg.sh syn umnotify "${json}"
 }

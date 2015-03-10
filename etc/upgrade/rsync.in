@@ -369,6 +369,14 @@ rsync_copy() {
 
 	rsync -acq --delete --force ${src} ${dst} &> /dev/null; err=$?; sync
 	rsync_logger "$(get_error_tag ${err}):rsync copy ${src} to ${dst}"
+	if ((0==err)); then
+		return
+	fi
+
+	rsync_logger "re-try copy by cp"
+	rm -fr ${dst}/*
+	cp -fpR ${src}/* ${dst}; err=$?; sync
+	rsync_logger "$(get_error_tag ${err}):cp ${src} to ${dst}"
 
 	return ${err}
 }
