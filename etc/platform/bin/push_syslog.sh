@@ -149,11 +149,6 @@ get_flow_user_log() {
 }
 functions[uv_time_flow.log]=get_flow_user_log
 
-get_flow_3g_log() {
-	do_nothing
-}
-functions[3g_flow.log]=get_flow_3g_log
-
 get_squid_access_log() {
 	get_daemon_log ${dir_opt_log_squid_access} squid_access.log squid.log
 }
