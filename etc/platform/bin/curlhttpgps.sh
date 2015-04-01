@@ -24,7 +24,7 @@ do
         if [ "$status" -eq "200" ];then
                 outcontent=$(cat ${GPS_LOG} | jq -j ".success")
 		case ${outcontent} in
-		ture)
+		true)
 			info="ok"
 			;;
 		false)
