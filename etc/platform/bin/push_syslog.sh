@@ -4,6 +4,7 @@
 
 main() {
 	local err=0
+	local status=0
 	local mac=$(get_mac) || return $?
 
 	local signature=$(cat /etc/platform/conf/encrypt_data_sys.dat)
@@ -15,7 +16,7 @@ main() {
 		newname=${newname#sys-}
 		newname=${newname//:/-}
 
-		local status=$(curl -s \
+		status=$(curl -s \
 					--max-time 180 \
 					-F "type=sys" \
 					-F "signature=${signature}" \
