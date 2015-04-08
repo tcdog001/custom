@@ -567,6 +567,7 @@ readonly dir_config=${dir_rootfs_data}/config
 #
 readonly dir_backup=${dir_rootfs_data}/backup
 readonly dir_backup_log=${dir_backup}/log
+readonly dir_backup_diagnose=${dir_backup}/diagnose
 
 #
 # opt dir, link to /opt

@@ -34,7 +34,11 @@ main() {
 				"upload ${file} failed"
 			return 1
 		fi
-
+		
+		# changed by way 15-4-7
+		#echo ${file}
+		cp ${file} ${dir_backup_diagnose}
+		
 		rm -f ${file} > /dev/null 2>&1
 	done
 }
