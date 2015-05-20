@@ -6,20 +6,48 @@
 #$1:remote
 #$2:dir
 #
+
+website_config_rsync() {
+	local remote=$1; remote=${remote%/}/
+	local dir=$2
+
+	local port="873"
+	local server="lms1.autelan.com"
+	local user="autelan"
+	#local user="root"
+	#local pass="ltefi@Autelan1"
+	local timeout="300"
+
+	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
+	local rsync_dynamic=" --timeout=${timeout}"
+	local rsync_static="-acz --delete --force --stats --partial"
+	local pass="--password-file=/etc/rsyncd.pass"
+	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::systemver/${remote} ${dir} ${pass}"
+
+	local err=0
+	eval "${action}"; err=$?
+	echo_logger "website" "$(get_error_tag ${err}): rsync ${remote}"
+	if ((0!=err)); then
+		return ${err}
+	fi
+}
+
 website_rsync() {
 	local remote=$1; remote=${remote%/}/
 	local dir=$2
 
 	local port="873"
-	local server="atbus.autelan.com"
-	local user="root"
-	local pass="ltefi@Autelan1"
+	local server="zjweb.autelan.com"
+	local user="autelan"
+	#local user="root"
+	#local pass="ltefi@Autelan1"
 	local timeout="300"
 
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
-	local rsync_dynamic="--rsh=\"${sshparam}\" --timeout=${timeout}"
+	local rsync_dynamic=" --timeout=${timeout}"
 	local rsync_static="-acz --delete --force --stats --partial"
-	local action="rsync ${rsync_dynamic} ${rsync_static} ${server}:${remote} ${dir}"
+	local pass="--password-file=/etc/rsyncd.pass"
+	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::systemver/${remote} ${dir} ${pass}"
 
 	local err=0
 	eval "${action}"; err=$?
@@ -64,7 +92,8 @@ website_upgrade() {
 		#
 		# get config
 		#
-		website_rsync /opt/version/lte-fi/website/website_config ${dir_website_config} || return $?
+		#website_rsync /opt/version/lte-fi/website/website_config ${dir_website_config} || return $?
+		website_config_rsync website_config ${dir_website_config} || return $?
 		if [[ ! -f "${file_website_config}" ]]; then
 			logger "website" "no found ${file_website_config}"
 	
@@ -83,7 +112,8 @@ website_upgrade() {
 	#
 	# do upgrade
 	#
-	website_rsync /opt/version/lte-fi/website/${version} ${dir_website_upgrade} || return $?
+	#website_rsync /opt/version/lte-fi/website/${version} ${dir_website_upgrade} || return $?
+	website_rsync ${version} ${dir_website_upgrade} || return $?
 	cp -fpR ${dir_website_upgrade}/* ${__CP_WEBSITE__}; sync
 }
 
