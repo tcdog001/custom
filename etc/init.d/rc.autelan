@@ -40,6 +40,7 @@ main() {
 	/bin/chmod -R 777 /mnt/hd/website/
 	/bin/chmod -R 777 /sbin/arp
 
+	/bin/chmod 600 /etc/rsyncd.pass
 	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
 	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
