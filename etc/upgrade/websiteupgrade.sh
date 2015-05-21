@@ -114,7 +114,9 @@ website_upgrade() {
 	#
 	#website_rsync /opt/version/lte-fi/website/${version} ${dir_website_upgrade} || return $?
 	website_rsync ${version} ${dir_website_upgrade} || return $?
+	mv ${dir_website_upgrade}/ver.info ${__CP_WEBSITE__}/ver.info.bak; sync
 	cp -fpR ${dir_website_upgrade}/* ${__CP_WEBSITE__}; sync
+	mv ${__CP_WEBSITE__}/ver.info.bak ${__CP_WEBSITE__}/ver.info; sync
 }
 
 main() {
