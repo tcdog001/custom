@@ -157,6 +157,15 @@ get_squid_access_log() {
 get_pv_http_log() {
 	get_daemon_log ${dir_opt_log_nginx_access} pv_http.log nginx.log
 	sed -i '/wifidog/d;/gw_id/d' ${logs[pv_http.log]}
+        #added by weianying 15-5-29 add pv log mac addr
+        local mac ip device time
+        if [ -f /tmp/udhcp.lease ]; then
+           dumpleases -f /tmp/udhcp.lease > /tmp/maciplist.log
+           while read mac ip device time; do
+              sed -i "s/${ip}/${ip}+${mac}/g" ${logs[pv_http.log]}
+           done < /tmp/maciplist.log
+           rm /tmp/maciplist.log
+        fi
 }
 functions[pv_http.log]=get_pv_http_log
 
