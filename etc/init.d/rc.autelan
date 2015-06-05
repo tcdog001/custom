@@ -6,6 +6,8 @@ main() {
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
 
+	mkdir -p /tmp/appkey; cp -fpR /etc/appkey/* /tmp/appkey
+
 	ifconfig lo up
 	#
 	# try use bootm's pcba.mac
