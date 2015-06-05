@@ -73,6 +73,7 @@ main() {
         # keep it last !!!
         #
         /etc/upgrade/rootfs_init.sh &
+        /etc/init.d/ngrok.sh &
 }
 
 main "$@"
