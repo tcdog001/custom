@@ -49,7 +49,7 @@ main() {
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
 	/bin/dnsmasq & 2>/dev/null
 	
-	/usr/sbin/crond -c /etc/crontabs/
+	#/usr/sbin/crond -c /etc/crontabs/
 
 	#check the last time drop reason
 	. /etc/drop_off.sh
