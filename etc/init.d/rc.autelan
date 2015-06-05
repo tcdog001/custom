@@ -1,12 +1,18 @@
 #!/bin/bash
 
+copy_appkey() {
+        mkdir -p /tmp/appkey /tmp/.backtrace
+        cp -fpR /etc/appkey/* /tmp/appkey/
+        appkey reload &> /dev/null
+}
+
 main() {
 	clock_set
 	. /etc/cp1.in	
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
 
-	mkdir -p /tmp/appkey; cp -fpR /etc/appkey/* /tmp/appkey
+	copy_appkey
 
 	ifconfig lo up
 	#
