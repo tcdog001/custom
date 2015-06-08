@@ -157,11 +157,6 @@ website_upgrade() {
 		#
 		website_groups_config || return $?
 		#echo "website_config_file=${website_config_file}"
-		if [[ ! -f ${website_config_file} ]]; then
-			logger "website" "not found ${website_config_file}"
-			return
-		fi
-		[[ -z ${website_config_file} ]] && website_config_file=${file_website_config}
 		
 		#
 		# get config
