@@ -8,7 +8,7 @@ if [ $# == 1 ]; then
 	if [ $1 == "cleanall" ]; then
 		tc qdisc del dev $landev root 2> /dev/null	
 		tc qdisc del dev $vlandev root 2> /dev/null	
-		return 0
+		exit 1 
 	fi
 fi
 
