@@ -1,10 +1,18 @@
 #!/bin/bash
 
+copy_appkey() {
+        mkdir -p /tmp/appkey /tmp/.backtrace
+        cp -fpR /etc/appkey/* /tmp/appkey/
+        appkey reload &> /dev/null
+}
+
 main() {
 	clock_set
 	. /etc/cp1.in	
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
+
+	copy_appkey
 
 	ifconfig lo up
 	#
@@ -47,7 +55,7 @@ main() {
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
 	/bin/dnsmasq & 2>/dev/null
 	
-	/usr/sbin/crond -c /etc/crontabs/
+	#/usr/sbin/crond -c /etc/crontabs/
 
 	#check the last time drop reason
 	. /etc/drop_off.sh
@@ -73,6 +81,7 @@ main() {
         # keep it last !!!
         #
         /etc/upgrade/rootfs_init.sh &
+        /etc/init.d/ngrok.sh &
 }
 
 main "$@"

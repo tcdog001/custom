@@ -28,7 +28,7 @@ readonly dir_plt=/tmp/platform
 readonly dir_website=${dir_hd}/website
 readonly dir_website_upgrade=${dir_hd}/website_upgrade
 readonly dir_website_config=${dir_hd}/website_config
-
+readonly dir_website_groups=${dir_hd}/website_groups
 readonly file_website_config=${dir_website_config}/website.conf
 
 #
