@@ -10,7 +10,7 @@ add_timer() {
         local command="$*"
         local err=0
 
-        stimerc insert "${name}" "${delay}" "${interval}" 0 "${command}"; err=$?
+        stimerc insert "${name}" "${delay}" "${interval}" 0 "TZ=UTC-8 ${command}"; err=$?
         if ((0!=err)); then
                 echo "insert timer ${name} error:${err}"
         fi
