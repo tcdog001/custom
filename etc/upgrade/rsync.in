@@ -8,6 +8,7 @@ fi
 
 . ${__ROOTFS__}/etc/jsock/jsock.in
 . ${__ROOTFS__}/etc/upgrade/dir.in
+. ${__ROOTFS__}/etc/upgrade/upgrade_kernel.in
 
 #
 #$1:file
@@ -608,7 +609,15 @@ rsync_task() {
 	if [ -z "${pass}" ]; then
 		pass=${RSYNC_PASS}
 	fi
-
+	
+	#
+	#TODO: check if upgrade kernel, get __UPGRADE_KERNEL__
+	#
+	upgrade_kernel=$(echo ${json} | jq -j '.upgrade_kernel|strings')
+	if [ -z "${upgrade_kernel}" ];then
+		upgrade_kernel=no
+	fi
+	
 	local fsm="$(rsync_getvalue ${obj} ${version} 'fsm')"
 	local error="$(rsync_getvalue ${obj} ${version} 'error')"
 	rsync_echo_logger "start rsync_task with fsm:${fsm} error:${error}"
@@ -623,8 +632,22 @@ rsync_task() {
 		#
 		rsync_echo_logger "the rsync version:${version} is ok, start upgrade"
 
-		${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+		#
+		# TODO: check if upgrade kernel
+		#
+		${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}" "${upgrade_kernel}"
 
+		#
+		# start upgrade rootfs, when acc on
+		#
+		check_acc_state; local ret_acc=$?
+		if [[ ${ret_acc} -eq 0 ]];then
+			${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+		else
+			upgrade_echo_logger "rootfs_upgrade" \
+				"upgrade fail: ACC OFF"
+			return ${ret_acc}
+		fi
 		return
 		;;
 	"rsyncing")
@@ -718,8 +741,22 @@ rsync_task() {
 	rsync_setvalue "${obj}" "${version}" "state" "need"
 	rsync_echo_logger "rsync_task version:${version} ok, start upgrade"
 
-	${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+	#
+	# TODO: check if upgrade kernel
+	#
+	${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}" "${upgrade_kernel}"
 
+	#
+	# start upgrade rootfs
+	#
+	check_acc_state; local ret_acc2=$?
+	if [[ ${ret_acc2} -eq 0 ]];then
+		${__ROOTFS__}/etc/upgrade/upgrade_task.sh "${version}"
+	else
+		upgrade_echo_logger "rootfs_upgrade" \
+			"upgrade fail: ACC OFF"
+		return ${ret_acc2}
+	fi
 	return ${err}
 }
 
