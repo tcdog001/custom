@@ -65,7 +65,7 @@ get_media_info() {
 		"${disk_sn}"	\
 		"${gateway_version}"	\
 		"${content_version}"  \
-		"${get_website_group}"
+		"${website_group}"
 }
 
 main() {
