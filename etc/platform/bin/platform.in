@@ -6,6 +6,136 @@ else
 	__PLATFORM_BIN_PLATFORM_IN__="$0"
 fi
 
-readonly FILE_REGISTER=/data/.register.json
-readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
+	readonly FILE_REGISTER=/data/.register.json
+	readonly FILE_CANCELLATION=/data/.cancellation.json
+	readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
+	readonly CERTIFICATE=/etc/platform/conf/server.cer
+	readonly USER_PASSWD=autelanauteviewlms:autelanauteviewlms20140925
 
+reg_check(){
+
+	local CURLE_OK=0
+	local CURLE_COULDNT_CONNECT=7
+	local CURLE_COULDNT_RESOLVE_HOST=6
+	local RECONNECTION_INTERVAL=5
+	local COOKIE_FILE=$1
+	local url=$2
+	local RESULT_FILE=$3
+	local RESPONSE_FILE=$4
+
+	while true
+	do
+		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d @$FILE_REGISTER -s  -c ${COOKIE_FILE}  ${url} > ${RESULT_FILE}
+		response=$?
+		echo response=$response > ${RESPONSE_FILE}
+		#		if [ $response -eq $CURLE_COULDNT_CONNECT ] || [ $response -eq $CURLE_COULDNT_RESOLVE_HOST ];then
+		if [ $response != $CURLE_OK ]; then
+			sleep $RECONNECTION_INTERVAL
+		else
+			break
+		fi
+	done
+
+}
+
+reg_print_result(){
+
+	out=`cat $1|jq '.code'`
+	case $out in
+		0) 
+			echo "register success!"
+			;;
+		-1)	
+			echo "user/password error!"
+			;;
+		*) 
+			echo "register fail!"
+			;;
+	esac
+}
+
+register_operation() {
+
+	local PAGE=lteRegister.do
+	local COOKIE_FILE=/tmp/$1_registerCookie.txt
+	local RESULT_FILE=/tmp/$1_registerResult.txt
+	local RESPONSE_FILE=/tmp/$1_registerResponse.txt
+	local URL_PATH=$2
+	local URL_DEFAULT=$3
+
+	if [ -f $RESULT_FILE ];then
+		rm $RESULT_FILE
+	fi
+
+	while [ ! -f $FILE_REGISTER ]; do
+		sleep 5
+	done
+
+	if [ -f $FILE_REGISTER ];then
+		if [ -s $URL_PATH ];then
+			url_path=`cat $URL_PATH |jq -j '.url'`
+			url=${url_path}${PAGE}
+		else
+			url=$URL_DEFAULT${PAGE}
+		fi
+		reg_check  ${COOKIE_FILE} ${url} ${RESULT_FILE}  ${RESPONSE_FILE}
+		
+		reg_print_result ${RESULT_FILE}
+	#	if [ -f $RESULT_FILE ];then
+	#		rm $RESULT_FILE
+	#	fi
+	else
+		echo $FILE_REGISTER" is not exist!"
+	fi
+}
+
+command_operation(){
+
+	local PAGE=lteCommand.do
+	local COOKIE_FILE=/tmp/$1_commandCookie.txt
+	local RESULT_FILE=/tmp/$1_commandResult.txt
+	local COMMAND_FILE=/tmp/$1_command.txt
+	local COMMAND_FILE_RE=/tmp/$1_command_record.log
+	local URL_PATH=$2
+	local URL_DEFAULT=$3
+		
+	if [ -f $FILE_REGISTER ];then
+		if [ -s $URL_PATH ];then
+			url_path=`cat $URL_PATH |jq -j '.url'`
+			url=${url_path}${PAGE}
+		else
+			url=${URL_DEFAULT}${PAGE}
+		fi
+		echo url=$url
+
+		macKey='{"mac":'
+		macValue=`cat $FILE_REGISTER |jq '.mac'`
+		endChar='}'
+		mac=${macKey}${macValue}${endChar}
+		echo mac=$mac
+
+		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d $mac  -s  -c $COOKIE_FILE  $url > $RESULT_FILE
+
+		out=`cat $RESULT_FILE |jq -j '.cmd'`
+		if [ -f $RESULT_FILE ];then
+	                rm $RESULT_FILE
+	        fi
+		echo out=$out
+		result=`echo "$out" |base64 -d`
+		echo $result |tr ";" "\n" > $COMMAND_FILE 
+		cat $COMMAND_FILE | while read myCommand
+		do
+	 		echo "Command:"$myCommand
+	 		echo "Get the Command :"$myCommand";time is :"`date`>> $COMMAND_FILE_RE
+			logger "platform" "command:$myCommand"
+
+			eval "$myCommand"
+		done
+		if [ -f $COMMAND_FILE ];then
+			rm $COMMAND_FILE
+		fi
+	else
+		logger "platform" "$FILE_REGISTER is not exist!"
+	fi
+
+}

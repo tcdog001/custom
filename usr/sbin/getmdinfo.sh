@@ -44,17 +44,28 @@ get_content_version() {
 	echo "$content_version"
 }
 
+get_website_group(){
+
+	website_group="`cat /data/.website_group 2>/dev/null`"
+	if [ -z "$website_group" ]; then
+		website_group=default
+	fi
+	echo "$website_group"
+}
+
 get_media_info() {
 	hdparm -i ${dev_hd} > ${HDINFO} 2>/dev/null
 	local disk_model=$(get_disk_model)
 	local disk_sn=$(get_disk_sn)
 	local gateway_version=$(get_gateway_version)
 	local content_version=$(get_content_version)
-	printf '"diskModel":"%s","diskSN":"%s","gateWayVersion":"%s","contentVersion":"%s"\n'   \
+	local website_group=$(get_website_group)
+	printf '"diskModel":"%s","diskSN":"%s","gateWayVersion":"%s","contentVersion":"%s","websiteGroup":"%s"\n'   \
 		"${disk_model}" \
 		"${disk_sn}"	\
 		"${gateway_version}"	\
-		"${content_version}"
+		"${content_version}"  \
+		"${get_website_group}"
 }
 
 main() {
