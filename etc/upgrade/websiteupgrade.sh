@@ -3,6 +3,10 @@
 . ${__ROOTFS__}/etc/upgrade/dir.in
 website_config_file=""
 
+#__zj_rsync__=yes means "use zj_rsync_server and zj_rsync_user"
+zj_rsync_server=zjweb.autelan.com
+zj_rsync_user=autelan
+
 #
 #$1:remote
 #$2:dir
@@ -13,11 +17,14 @@ website_config_rsync() {
 	local dir=$2
 
 	local port="873"
-	local server="lms1.autelan.com"
-	local user="autelan"
-	#local user="root"
-	#local pass="ltefi@Autelan1"
 	local timeout="300"
+	if [[ "${__zj_rsync__}" = "yes" ]]; then
+		local server=${zj_rsync_server}
+		local user=${zj_rsync_user}
+	else
+		local server="lms1.autelan.com"
+		local user="autelan"
+	fi
 
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic=" --timeout=${timeout}"
@@ -38,12 +45,15 @@ website_rsync() {
 	local dir=$2
 
 	local port="873"
-	local server="zjweb.autelan.com"
-	local user="autelan"
-	#local user="root"
-	#local pass="ltefi@Autelan1"
 	local timeout="300"
-
+	if [[ "${__zj_rsync__}" = "yes" ]]; then
+		local server=${zj_rsync_server}
+		local user=${zj_rsync_user}
+	else
+		local server="zjweb.autelan.com"
+		local user="autelan"
+	fi
+	
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic=" --timeout=${timeout}"
 	local rsync_static="-acz --delete --force --stats --partial"
@@ -92,9 +102,14 @@ website_groups_rsync() {
 	local dir=$2
 
 	local port="873"
-	local server="lms1.autelan.com"
-	local user="autelan"
 	local timeout="300"
+	if [[ "${__zj_rsync__}" = "yes" ]]; then
+		local server=${zj_rsync_server}
+		local user=${zj_rsync_user}
+	else
+		local server="lms1.autelan.com"
+		local user="autelan"
+	fi
 
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic=" --timeout=${timeout}"
@@ -110,19 +125,32 @@ website_groups_rsync() {
 	fi
 }
 
+save_device_group() {
+	local group="$*"
+	local group_file=/data/.website_group
+
+	if [[ ${group} ]]; then
+		echo "${group}" > ${group_file} 2>/dev/null
+	else
+		echo "default" > ${group_file} 2>/dev/null
+	fi
+}
+
 get_device_group() {
 	local dir_groups="$1"
 	local group=""
 	local mac=""
 
 	mac=$(cat /data/.register.json 2>/dev/null | jq -j '.mac|strings')
-
+	mac=$(echo ${mac} | tr -s [a-z] [A-Z])
+	
 	local file
 	# Get group_file from dir_groups
-	for file in $(ls ${dir_groups}/group_* | sort -r); do
+	for file in $(ls ${dir_groups}/group_* 2>/dev/null| sort -r); do
 		# Get mac's group from group_file
-		[[ ${mac} ]] && group=$(awk -v mac=${mac} '{if ($1==mac) print $2}' ${file})
+		[[ ${mac} ]] && group=$(awk -v mac=${mac} '{if ($1==mac) print $2}' ${file} 2>/dev/null)
 	done
+	save_device_group ${group}
 	echo ${group}
 }
 
@@ -156,7 +184,7 @@ website_upgrade() {
 		# get device group and set config file name
 		#
 		website_groups_config || return $?
-		#echo "website_config_file=${website_config_file}"
+		echo "website_config_file=${website_config_file}"
 		
 		#
 		# get config

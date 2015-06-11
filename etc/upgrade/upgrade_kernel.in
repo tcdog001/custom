@@ -1,0 +1,705 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+. ${__ROOTFS__}/etc/upgrade/upgrade.in
+
+data_ker_file=/data/.ker_version
+tmp_ker_file=/tmp/.ker_version
+#
+# check the file hi_kernel.bin
+#
+check_kernel_file() {
+    local version=$1; shift 1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=hi_kernel.bin
+    local ret=""
+
+    ls ${kernel_file_path}/${kernel_file} >/dev/null 2>&1; ret=$?
+    if [[ ${ret} -ne 0 ]];then
+        return 1
+    else
+        return 0
+    fi
+}
+#
+# check the state of acc
+#
+check_acc_state() {
+    local ret=""
+    local acc_file=/data/acc_off.txt
+
+    ls ${acc_file} >/dev/null 2>&1; ret=$?
+    if [[ ${ret} -ne 0 ]];then
+        return 0
+    else
+        return 1
+    fi
+}
+#
+# compare the year month day hour min second
+#
+do_compare() {
+    local new_var=$1
+    local old_var=$2
+
+    if [[ ${new_var} -gt ${old_var} ]];then
+        return 0
+    else
+        if [[ ${new_var} -lt ${old_var} ]];then
+            return 1
+        else
+            return 2
+        fi
+    fi
+}
+#
+# upgrade the kernel, dd of=/dev/mmcblk0p6 if=
+#
+do_upgrade_kernel() {
+    local version=$1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=hi_kernel.bin
+    local ret=""
+
+    upgrade_echo_logger "kernel_upgrade" \
+    	"upgrade start......"
+    dd of=/dev/mmcblk0p6 if=${kernel_file_path}/${kernel_file}; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        write_ker_version
+        upgrade_echo_logger "kernel_upgrade" \
+        	"upgrade OK"
+        return 0
+    else
+	    upgrade_echo_logger "kernel_upgrade" \
+        	"upgrade fail: dd error"
+    	return 1
+    fi
+}
+#
+# check the state of acc, and ugrade kernel version
+#
+upgrade_kernel() {
+    local version=$1
+    local ret=""
+
+    check_acc_state; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        upgrade_echo_logger "kernel_upgrade" \
+            "need upgrade kernel"
+         do_upgrade_kernel ${version}
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "upgrade fail: ACC OFF"
+        return 1
+    fi
+}
+#
+#change the english month to count
+#$1: output
+#
+change_month() {
+    local month_eng=$1
+    local month=""
+    #local eng_month="Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec"
+    #local month_list="01 02 03 04 05 06 07 08 09 10 11 12"
+    #read ${eng_month} <<< ${month_list}
+    case "${month_eng}" in
+        "Jan")
+            month="1"
+            ;;
+        "Feb")
+            month="2"
+            ;;
+        "Mar")
+            month="3"
+            ;;
+        "Apr")
+            month="4"
+            ;;
+        "May")
+            month="5"
+            ;;
+        "Jun")
+            month="6"
+            ;;
+        "Jul")
+            month="7"
+            ;;
+        "Aug")
+            month="8"
+            ;;
+        "Sep")
+            month="9"
+            ;;
+        "Oct")
+            month="10"
+            ;;
+        "Nov")
+            month="11"
+            ;;
+        "Dec")
+            month="12"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    echo ${month}
+}
+#
+#$1 : the new kernel time, mkimage -l ...
+#$2 : year,month,day.hour...
+#
+get_YMD() {
+    local time=$1
+    local para=$2; shift 2
+    local result=""
+    local month=""
+	local var=$(echo "${time}" |wc -w 2>/dev/null)
+
+    case "${para}" in
+        "year")
+        	if [[ ${var} -eq 6 ]];then
+            		result=$(echo "${time}" |awk '{print $6}' 2>/dev/null)
+            	else 
+            		if [[ ${var} -eq 5 ]];then
+            			result=$(echo "${time}" |awk '{print $5}' 2>/dev/null)
+            		fi
+            	fi
+            ;;
+        "month")
+            month=$(echo "${time}" |awk '{print $2}' 2>/dev/null)
+            result=$(change_month "${month}" 2>/dev/null)
+            ;;
+        "day")
+            result=$(echo "${time}" |awk '{print $3}' 2>/dev/null)
+            ;;
+        "hour")
+            result=$(echo "${time}" |awk '{print $4}' 2>/dev/null)
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    echo ${result}
+}
+do_get_YMD() {
+    local time=$1
+    local para=$2; shift 2
+    local ymd=""
+
+    ymd=$(get_YMD "${time}" "${para}" 2>/dev/null)
+    if [[ ! -z ${ymd} ]];then
+        echo ${ymd}
+    else
+        return 1
+    fi
+}
+#
+# get year
+#
+do_get_year(){
+    local time=$1; shift 1
+    local year=$(do_get_YMD "${time}" "year" 2>/dev/null)
+
+    echo ${year}
+}
+#
+# get month
+#
+do_get_month() {
+    local time=$1; shift 1
+    local month=$(do_get_YMD "${time}" "month" 2>/dev/null)
+
+    echo ${month}
+}
+#
+# get day
+#
+do_get_day() {
+    local time=$1; shift 1
+    local day=$(do_get_YMD "${time}" "day" 2>/dev/null)
+
+    echo ${day}
+}
+#
+# get time HH:MM:SS
+#
+do_get_hms() {
+    local time=$1; shift 1
+    local hms=$(do_get_YMD "${time}" "hour" 2>/dev/null)
+
+    echo ${hms}
+}
+#
+# output the kernel time: YY-MM-DD-HH:MM:SS
+#
+do_get_time() {
+    local time=$1; shift 1
+    local year=$(do_get_year "${time}" 2>/dev/null)
+    local month=$(do_get_month "${time}" 2>/dev/null)
+    local day=$(do_get_day "${time}" 2>/dev/null)
+    local hms=$(do_get_hms "${time}" 2>/dev/null)
+    local _time_=${year}-${month}-${day}-${hms}
+
+    echo ${_time_}
+}
+#
+# get year from YY-MM-DD-hh:mm:ss
+#
+get_year() {
+    local time=$1
+    local year=""
+
+    year=$(echo "${time}" |awk -F '-' '{print $1}')
+    echo ${year}
+}
+#
+# get month from YY-MM-DD-hh:mm:ss
+#
+get_month() {
+    local time=$1
+    local month=""
+
+    month=$(echo "${time}" |awk -F '-' '{print $2}')
+    echo ${month}
+}
+#
+# get day from YY-MM-DD-hh:mm:ss
+#
+get_day() {
+    local time=$1
+    local day=""
+
+    day=$(echo "${time}" |awk -F '-' '{print $3}')
+    echo ${day}
+}
+#
+# get hour from YY-MM-DD-hh:mm:ss
+#
+get_hms() {
+    local time=$1
+    local hms=""
+
+    hms=$(echo "${time}" |awk -F '-' '{print $4}')
+    echo ${hms}
+}
+#
+# change hh:mm:ss --> hhmmss
+#
+change_hms() {
+    local time=$1
+    local hms=""
+
+    hms=$(get_hms "${time}" |sed 's/://g')
+    echo "1${hms}"
+}
+#
+# get the new kernel version
+#
+get_new_kerversion() {
+    local ker_version=$(cat ${tmp_ker_file} 2>/dev/null)
+    echo ${ker_version}
+}
+#
+# record the kernel version to the data
+#
+write_ker_version() {
+    local ker_version=$(get_new_kerversion)
+
+    echo ${ker_version} > ${data_ker_file}; fsync ${data_ker_file}
+}
+#
+# get the time of /data/.ker_version
+#
+get_old_kerversion() {
+    local old_kerversion=$(cat ${data_ker_file} 2>/dev/null)
+
+    if [[ -z ${old_kerversion} ]];then
+        old_kerversion=0
+    fi
+    echo ${old_kerversion}
+}
+#
+# get the year of /data/.ker_version
+#
+get_old_year() {
+    local time=$(get_old_kerversion)
+    local year=$(get_year "${time}")
+
+    echo ${year}
+}
+#
+# get the month of /data/.ker_version
+#
+get_old_month() {
+    local time=$(get_old_kerversion)
+    local month=$(get_month "${time}")
+
+    echo ${month}
+}
+#
+# get the day of /data/.ker_version
+#
+get_old_day() {
+    local time=$(get_old_kerversion)
+    local day=$(get_day "${time}")
+
+    echo ${day}
+}
+#
+# get the hour-min-second of /data/.ker_version
+#
+get_old_hms() {
+    local time=$(get_old_kerversion)
+    local hms=$(change_hms "${time}")
+
+    echo ${hms}
+}
+#
+# $1: hi_kernel.bin
+# mkimage -l hi_kernel.bin
+#
+mkimage_time() {
+    local file=$1
+    local time=$(mkimage -l ${file} 2>/dev/null |grep -r 'Created:' |sed 's/Created://g' 2>/dev/null)
+
+    echo ${time}
+}
+#
+# get the new kernel time
+#
+get_new_kernel_time() {
+    local version=$1; shift 1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=hi_kernel.bin
+    local new_kernel_time=$(mkimage_time "${kernel_file_path}/${kernel_file}")
+
+    echo ${new_kernel_time}
+}
+#
+# change the kernel time YY-MM-DD-hh:mm:ss
+# change the kernel time of new version to second
+#
+change_new_kernel_time() {
+    local version=$1
+    local kernel_time=$(get_new_kernel_time ${version})
+    local time=$(do_get_time "${kernel_time}")
+
+    echo ${time} > ${tmp_ker_file}
+    echo ${time}
+}
+#
+# get the year of new kernel
+#
+get_new_year() {
+    local version=$1
+    local time=$(change_new_kernel_time ${version})
+    local year=$(get_year "${time}")
+    echo ${year}
+}
+#
+# get the month of new kernel
+#
+get_new_month() {
+    local version=$1
+    local time=$(change_new_kernel_time ${version})
+    local month=$(get_month "${time}")
+
+    echo ${month}
+}
+#
+# get the day of new kernel
+#
+get_new_day() {
+    local version=$1
+    local time=$(change_new_kernel_time ${version})
+    local day=$(get_day "${time}")
+    echo ${day}
+}
+#
+# get the hour-min-second of new kernel
+#
+get_new_hms() {
+    local version=$1
+    local time=$(change_new_kernel_time ${version})
+    local hms=$(change_hms "${time}")
+    echo ${hms}
+}
+#
+# get the kernel time of the curerent version
+# change the time to YY-MM-DD-hh:mm:ss
+#
+get_uname_time(){
+    local var=$(uname -v |awk -F 'SMP ' '{print $2}' 2>/dev/null)
+    #local var="Mon Jun 8 13:59:18 EDT 2015"
+    local time=$(do_get_time "${var}")
+
+    echo ${time}
+}
+#
+# get the year of current time (uname)
+#
+get_uname_year() {
+    local time=$(get_uname_time)
+    local year=$(get_year "${time}")
+
+    echo ${year}
+}
+#
+# get the month of current time (uname)
+#
+get_uname_month() {
+    local time=$(get_uname_time)
+    local month=$(get_month "${time}")
+
+    echo ${month}
+}
+#
+# get the day of current time (uname)
+#
+get_uname_day() {
+    local time=$(get_uname_time)
+    local day=$(get_day "${time}")
+
+    echo ${day}
+}
+#
+# get the hour-min-second of current time (uname)
+#
+get_uname_hms() {
+    local time=$(get_uname_time)
+    local hms=$(change_hms "${time}")
+
+    echo ${hms}
+}
+#
+# compare the hms of current kernel and new kernel
+#
+compare_data_hms() {
+    local version=$1
+    local new_hms=$(get_new_hms ${version})
+    local data_hms=$(get_old_hms)
+    local ret=""
+
+    do_compare ${new_hms} ${data_hms}; ret=$?
+    case "${ret}" in
+        "0")
+            upgrade_kernel ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the day of current kernel and new kernel
+#
+compare_data_day() {
+    local version=$1
+    local new_day=$(get_new_day ${version})
+    local data_day=$(get_old_day)
+    local ret=""
+
+    do_compare ${new_day} ${data_day}; ret=$?
+    case "${ret}" in
+        "0")
+            upgrade_kernel ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_data_hms ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the month of current kernel and new kernel
+#
+compare_data_month() {
+    local version=$1
+    local new_month=$(get_new_month ${version})
+    local data_month=$(get_old_month)
+    local ret=""
+
+    do_compare ${new_month} ${data_month}; ret=$?
+    case "${ret}" in
+        "0")
+            upgrade_kernel ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_data_day ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the year of current kernel and new kernel
+#
+compare_data_year() {
+    local version=$1
+    local new_year=$(get_new_year ${version})
+    local data_year=$(get_old_year)
+    local ret=""
+
+    do_compare ${new_year} ${data_year}; ret=$?
+    case "${ret}" in
+        "0")
+            upgrade_kernel ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_data_month ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the kernel version file (/data/.ker_version)
+#
+compare_data_time() {
+    local version=$1
+
+    compare_data_year ${version}
+}
+#
+# compare the hms of current kernel and new kernel
+#
+compare_uname_hms() {
+    local version=$1
+    local new_hms=$(get_new_hms ${version})
+    local uname_hms=$(get_uname_hms)
+    local ret=""
+
+    do_compare ${new_hms} ${uname_hms}; ret=$?
+    case "${ret}" in
+        "0")
+            compare_data_time ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the day of current kernel and new kernel
+#
+compare_uname_day() {
+    local version=$1
+    local new_day=$(get_new_day ${version})
+    local uname_day=$(get_uname_day)
+    local ret=""
+
+    do_compare ${new_day} ${uname_day}; ret=$?
+    case "${ret}" in
+        "0")
+            compare_data_time ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_uname_hms ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the month of current kernel and new kernel
+#
+compare_uname_month() {
+    local version=$1
+    local new_month=$(get_new_month ${version})
+    local uname_month=$(get_uname_month)
+    local ret=""
+
+    do_compare ${new_month} ${uname_month}; ret=$?
+    case "${ret}" in
+        "0")
+            compare_data_time ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_uname_day ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# compare the year of current kernel and new kernel
+#
+compare_uname_year() {
+    local version=$1
+    local new_year=$(get_new_year ${version})
+    local uname_year=$(get_uname_year)
+    local ret=""
+
+    do_compare ${new_year} ${uname_year}; ret=$?
+    case "${ret}" in
+        "0")
+            compare_data_time ${version}
+            ;;
+        "1")
+            upgrade_echo_logger "kernel_upgrade" \
+                "not need upgrade kernel"
+            ;;
+        "2")
+            compare_uname_month ${version}
+            ;;
+        "*")
+            ;;
+    esac
+    return ${ret}
+}
+#
+# Compare the new version and old version of the time
+# When the new time is greater than the old time, upgrade the kernel
+#
+compare_uname_time() {
+    local version=$1
+    
+    compare_uname_year ${version}
+}
+
