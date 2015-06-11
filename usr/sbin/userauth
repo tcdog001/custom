@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. /etc/utils/utils.in
+
+mac="$1"
+group="$2"                          
+echo $group
+filepath="/etc/um/group$group"
+
+if [ -f "$filepath" ]; then 
+
+onlineValue=`awk '/online/{print $2}'  $filepath`
+flowMax=`awk '/flow/{print $2}'  $filepath`
+rateMax=`awk '/rate/{print $2}'  $filepath`
+rateAvg=$rateMax
+echo "onlineValue=$onlineValue, $flowMax, $rateAvg"
+
+main() {
+        local josn                                
+                                                   
+       #json=$(json_create wan/online/max $onlineValue wan/flow/up/max $flowMax wan/flow/down/max $flowMax wan/flow/all/max $flowMax wan/rate/up/max $rateMax wan/rate/up/avg $rateAvg wan/rate/down/max $rateMax wan/rate/down/avg $rateAvg wan/rate/all/max $rateMax wan/rate/all/avg $rateAvg) 
+       json=$(json_create \
+       wan/online/max $onlineValue \
+       wan/flow/up/max $flowMax \
+       wan/flow/down/max $flowMax \
+       wan/flow/all/max $flowMax \
+       wan/rate/up/max $rateMax \
+       wan/rate/up/avg $rateAvg \
+       wan/rate/down/max $rateMax \
+       wan/rate/down/avg $rateAvg \
+       wan/rate/all/max $rateMax \
+       wan/rate/all/avg $rateAvg) 
+        
+        json=$(echo ${json} | jq -j -c .)                              
+        echo "umc auth $mac $group $json"    
+        umc auth $mac $group "$json"        
+}                                          
+                                           
+main "$@"   
+else
+    echo "Error:couldn't find $filepath"
+fi

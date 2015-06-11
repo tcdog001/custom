@@ -3,9 +3,7 @@
 . ${__ROOTFS__}/etc/utils/utils.in
 
 main() {
-	local list="monitord monitors"
-	list="${list} ${list}"
-	killall ${list} > /dev/null 2>&1
+	local list
 
 	list="$(ls /etc/monitord.d 2>/dev/null) \
 		rsync_task.sh \

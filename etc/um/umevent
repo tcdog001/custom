@@ -1,0 +1,114 @@
+#!/bin/bash
+
+do_limit() {
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+	local group="$3"; shift 3
+	local json="$*"
+
+	if ((argc<3)); then
+		return 1
+	fi
+
+	echo todo
+	echo 1. move ip to ipset 'unauth'
+	echo 2. set tc default
+	echo 3. set nginx default
+	if [ $group -eq 1 ]; then
+		if [ ! -f /etc/um/iplist.conf ]; then	
+			echo "Error:there is no /tmp/config/iplist.conf"
+			return 1
+		fi
+		local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  /etc/um/iplist.conf`				
+		sed -i "s/$ip [ ]*$flag/$ip 1/g" /etc/um/iplist.conf 
+		nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+		/sbin/ipset -A white_list $ip
+	fi
+}
+
+um_init() {
+	echo todo
+	echo 1. init global iptable
+	echo 2. init global ipset
+	iptables -t nat -A PREROUTING  ! -d  192.168.0.1 -p tcp --dport 80 -i eth0.1  -m state --state NEW -j REDIRECT --to-port 3126
+
+	iptables -P  FORWARD DROP
+
+	ipset -N white_list ipmap --network 192.168.0.0/16
+	iptables -A FORWARD  -p udp --dport 53 -m state --state NEW -j ACCEPT
+
+	iptables -A FORWARD  -i eth0.1 -o eth0 -m set ! --match-set  white_list src -j DROP
+	iptables -A FORWARD  -p icmp --icmp-type 8 -j ACCEPT
+	iptables -A FORWARD  -p tcp --dport 443 --syn -m state --state NEW -j ACCEPT
+	iptables -A FORWARD  -p tcp --dport 21 --syn -m state --state NEW -j ACCEPT
+	iptables -A FORWARD  -m state --state ESTABLISHED,RELATED -j ACCEPT
+	/etc/um/set_tc.sh
+}
+
+um_fini() {
+	echo todo
+	echo 1. clear global iptable
+	echo 2. clear global ipset 
+}
+
+do_xbind() {
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+
+	if ((2!=argc)); then
+		return 1
+	fi
+	do_limit "${mac}" "${ip}" 0
+}
+
+um_bind() {
+	do_xbind "$@"
+}
+
+um_unbind() {
+	do_xbind "$@"
+}
+
+um_auth() {
+	do_limit "$@"
+}
+
+do_offline() {
+	local ip="$1"
+	local reason="$2"
+
+	#
+	# todo: update user offline reason
+	#
+}
+
+um_deauth() {
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+	local reason="$3"
+
+	if ((3!=argc)); then
+		return 1
+	fi
+	do_limit "${mac}" "${ip}" 0
+	do_offline "${ip}" "${reason}"
+}
+
+main() {
+	local action="$1"; shift
+	echo "$action $@"
+
+	case ${action} in
+		init|fini|bind|unbind|auth|deauth)
+			um_${action} "$@"
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+main "$@"
