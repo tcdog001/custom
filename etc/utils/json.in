@@ -5,6 +5,8 @@ if [[ -z "${__UTILS_JSON_IN__}" ]]; then __UTILS_JSON_IN__=_; else return; fi
 . ${__ROOTFS__}/etc/utils/list.in
 . ${__ROOTFS__}/etc/utils/array.in
 
+readonly JSON_NULL_OBJECT="{}"
+
 __json_debug() {
 	if [[ -n "${__JSON_DEBUG__}" && -n "${__JSON_DEBUG_FILE__}" ]]; then
 		echo "$@" >> ${__JSON_DEBUG_FILE__}
