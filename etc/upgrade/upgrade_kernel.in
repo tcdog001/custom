@@ -50,23 +50,6 @@ check_acc_state() {
     fi
 }
 #
-# compare the year month day hour min second
-#
-do_compare() {
-    local new_var=$1
-    local old_var=$2
-
-    if [[ ${new_var} -gt ${old_var} ]];then
-        return 0
-    else
-        if [[ ${new_var} -lt ${old_var} ]];then
-            return 1
-        else
-            return 2
-        fi
-    fi
-}
-#
 # upgrade the kernel, dd of=/dev/mmcblk0p6 if=
 #
 do_upgrade_kernel() {
@@ -107,36 +90,6 @@ upgrade_kernel() {
     fi
 }
 #
-# get year from YY-MM-DD-hh:mm:ss
-#
-get_year() {
-    local time=$1
-    local year=""
-
-    year=$(echo "${time}" |awk -F '-' '{print $1}')
-    echo ${year}
-}
-#
-# get month from YY-MM-DD-hh:mm:ss
-#
-get_month() {
-    local time=$1
-    local month=""
-
-    month=$(echo "${time}" |awk -F '-' '{print $2}')
-    echo "1${month}"
-}
-#
-# get day from YY-MM-DD-hh:mm:ss
-#
-get_day() {
-    local time=$1
-    local day=""
-
-    day=$(echo "${time}" |awk -F '-' '{print $3}')
-    echo "1${day}"
-}
-#
 # get the new kernel time
 #
 get_new_kernel_time() {
@@ -147,36 +100,6 @@ get_new_kernel_time() {
     local kernel_time=$(date -d "${new_kernel_time}" -u +'%F')
 
     echo ${kernel_time}
-}
-#
-# get the year of new kernel
-#
-get_new_year() {
-    local version=$1
-    local time=$(get_new_kernel_time ${version})
-    local year=$(get_year "${time}")
-
-    echo ${year}
-}
-#
-# get the month of new kernel
-#
-get_new_month() {
-    local version=$1
-    local time=$(get_new_kernel_time ${version})
-    local month=$(get_month "${time}")
-
-    echo ${month}
-}
-#
-# get the day of new kernel
-#
-get_new_day() {
-    local version=$1
-    local time=$(get_new_kernel_time ${version})
-    local day=$(get_day "${time}")
-
-    echo ${day}
 }
 #
 # get the kernel time of the curerent version
@@ -190,118 +113,19 @@ get_uname_time(){
     echo ${time}
 }
 #
-# get the year of current time (uname)
-#
-get_uname_year() {
-    local time=$(get_uname_time)
-    local year=$(get_year "${time}")
-
-    echo ${year}
-}
-#
-# get the month of current time (uname)
-#
-get_uname_month() {
-    local time=$(get_uname_time)
-    local month=$(get_month "${time}")
-
-    echo ${month}
-}
-#
-# get the day of current time (uname)
-#
-get_uname_day() {
-    local time=$(get_uname_time)
-    local day=$(get_day "${time}")
-
-    echo ${day}
-}
-#
-# compare the day of current kernel and new kernel
-#
-compare_uname_day() {
-    local version=$1
-    local new_day=$(get_new_day ${version})
-    local uname_day=$(get_uname_day)
-    local ret=""
-
-    do_compare ${new_day} ${uname_day}; ret=$?
-    case "${ret}" in
-        "0")
-            upgrade_kernel ${version}
-            ;;
-        "1")
-            upgrade_echo_logger "kernel_upgrade" \
-                "not need upgrade kernel"
-            ;;
-        "2")
-            upgrade_echo_logger "kernel_upgrade" \
-                "not need upgrade kernel"
-            ;;
-        "*")
-            ;;
-    esac
-    return ${ret}
-}
-#
-# compare the month of current kernel and new kernel
-#
-compare_uname_month() {
-    local version=$1
-    local new_month=$(get_new_month ${version})
-    local uname_month=$(get_uname_month)
-    local ret=""
-
-    do_compare ${new_month} ${uname_month}; ret=$?
-    case "${ret}" in
-        "0")
-            upgrade_kernel ${version}
-            ;;
-        "1")
-            upgrade_echo_logger "kernel_upgrade" \
-                "not need upgrade kernel"
-            ;;
-        "2")
-            compare_uname_day ${version}
-            ;;
-        "*")
-            ;;
-    esac
-    return ${ret}
-}
-#
-# compare the year of current kernel and new kernel
-#
-compare_uname_year() {
-    local version=$1
-    local new_year=$(get_new_year ${version})
-    local uname_year=$(get_uname_year)
-    local ret=""
-
-    do_compare ${new_year} ${uname_year}; ret=$?
-    case "${ret}" in
-        "0")
-            upgrade_kernel ${version}
-            ;;
-        "1")
-            upgrade_echo_logger "kernel_upgrade" \
-                "not need upgrade kernel"
-            ;;
-        "2")
-            compare_uname_month ${version}
-            ;;
-        "*")
-            ;;
-    esac
-    return ${ret}
-}
-#
 # Compare the new version and old version of the time
 # When the new time is greater than the old time, upgrade the kernel
 #
 compare_uname_time() {
     local version=$1
+    local uname_time=$(get_uname_time)
+    local new_time=$(get_new_kernel_time ${version})
 
-    compare_uname_year ${version}
+    if [[ ${uname_time} < ${new_time} ]];then
+        upgrade_kernel ${version}
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "not need upgrade kernel"
+    fi
 }
 
