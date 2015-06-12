@@ -3,28 +3,22 @@
 . ${__ROOTFS__}/etc/upgrade/dir.in
 website_config_file=""
 
-#__zj_rsync__=yes means "use zj_rsync_server and zj_rsync_user"
+#__zj_rsync__=no means "not use zj_rsync_server and zj_rsync_user"
 zj_rsync_server=zjweb.autelan.com
+zj_rsync_config_server=zjconfig.autelan.com
 zj_rsync_user=autelan
 
 #
-#$1:remote
-#$2:dir
+# $1: remote path, $2: dir, $3: server, $4: user
 #
-
-website_config_rsync() {
-	local remote=$1; remote=${remote%/}/
-	local dir=$2
+rsync_action() {
+	local remote="$1"
+	local dir="$2"
+	local server="$3"
+	local user="$4"
 
 	local port="873"
 	local timeout="300"
-	if [[ "${__zj_rsync__}" = "yes" ]]; then
-		local server=${zj_rsync_server}
-		local user=${zj_rsync_user}
-	else
-		local server="lms1.autelan.com"
-		local user="autelan"
-	fi
 
 	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic=" --timeout=${timeout}"
@@ -34,6 +28,27 @@ website_config_rsync() {
 
 	local err=0
 	eval "${action}"; err=$?
+	return ${err}
+}
+
+#
+#$1:remote
+#$2:dir
+#
+website_config_rsync() {
+	local remote=$1; remote=${remote%/}/
+	local dir=$2
+
+	if [[ "${__zj_rsync__}" = "no" ]]; then
+		local server="lms1.autelan.com"
+		local user="autelan"
+	else
+		local server=${zj_rsync_config_server}
+		local user=${zj_rsync_user}
+	fi
+
+	local err=0
+	rsync_action ${remote} ${dir} ${server} ${user}; err=$?
 	echo_logger "website" "$(get_error_tag ${err}): rsync ${remote}"
 	if ((0!=err)); then
 		return ${err}
@@ -44,24 +59,16 @@ website_rsync() {
 	local remote=$1; remote=${remote%/}/
 	local dir=$2
 
-	local port="873"
-	local timeout="300"
-	if [[ "${__zj_rsync__}" = "yes" ]]; then
-		local server=${zj_rsync_server}
-		local user=${zj_rsync_user}
-	else
+	if [[ "${__zj_rsync__}" = "no" ]]; then
 		local server="zjweb.autelan.com"
 		local user="autelan"
+	else
+		local server=${zj_rsync_server}
+		local user=${zj_rsync_user}
 	fi
 	
-	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
-	local rsync_dynamic=" --timeout=${timeout}"
-	local rsync_static="-acz --delete --force --stats --partial"
-	local pass="--password-file=/etc/rsyncd.pass"
-	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::systemver/${remote} ${dir} ${pass}"
-
 	local err=0
-	eval "${action}"; err=$?
+	rsync_action ${remote} ${dir} ${server} ${user}; err=$?
 	echo_logger "website" "$(get_error_tag ${err}): rsync ${remote}"
 	if ((0!=err)); then
 		return ${err}
@@ -101,24 +108,16 @@ website_groups_rsync() {
 	local remote=$1; remote=${remote%/}/
 	local dir=$2
 
-	local port="873"
-	local timeout="300"
-	if [[ "${__zj_rsync__}" = "yes" ]]; then
-		local server=${zj_rsync_server}
-		local user=${zj_rsync_user}
-	else
+	if [[ "${__zj_rsync__}" = "no" ]]; then
 		local server="lms1.autelan.com"
 		local user="autelan"
+	else
+		local server=${zj_rsync_config_server}
+		local user=${zj_rsync_user}
 	fi
 
-	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
-	local rsync_dynamic=" --timeout=${timeout}"
-	local rsync_static="-acz --delete --force --stats --partial"
-	local pass="--password-file=/etc/rsyncd.pass"
-	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::systemver/${remote} ${dir} ${pass}"
-
 	local err=0
-	eval "${action}"; err=$?
+	rsync_action ${remote} ${dir} ${server} ${user}; err=$?
 	echo_logger "website" "$(get_error_tag ${err}): rsync ${remote}"
 	if ((0!=err)); then
 		return ${err}
