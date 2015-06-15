@@ -6,11 +6,11 @@ else
 	__PLATFORM_BIN_PLATFORM_IN__="$0"
 fi
 
-	readonly FILE_REGISTER=/data/.register.json
-	readonly FILE_CANCELLATION=/data/.cancellation.json
-	readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
-	readonly CERTIFICATE=/etc/platform/conf/server.cer
-	readonly USER_PASSWD=autelanauteviewlms:autelanauteviewlms20140925
+readonly FILE_REGISTER=/data/.register.json
+readonly FILE_CANCELLATION=/data/.cancellation.json
+readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
+readonly CERTIFICATE=/etc/platform/conf/server.cer
+readonly USER_PASSWD=autelanauteviewlms:autelanauteviewlms20140925
 
 reg_check(){
 
@@ -57,9 +57,9 @@ reg_print_result(){
 register_operation() {
 
 	local PAGE=lteRegister.do
-	local COOKIE_FILE=/tmp/$1_registerCookie.txt
-	local RESULT_FILE=/tmp/$1_registerResult.txt
-	local RESPONSE_FILE=/tmp/$1_registerResponse.txt
+	local COOKIE_FILE=/tmp/registerCookie_$1.txt
+	local RESULT_FILE=/tmp/registerResult_$1.txt
+	local RESPONSE_FILE=/tmp/registerResponse_$1.txt
 	local URL_PATH=$2
 	local URL_DEFAULT=$3
 
@@ -79,7 +79,8 @@ register_operation() {
 			url=$URL_DEFAULT${PAGE}
 		fi
 		reg_check  ${COOKIE_FILE} ${url} ${RESULT_FILE}  ${RESPONSE_FILE}
-		
+		rm -f ${RESPONSE_FILE}
+	
 		reg_print_result ${RESULT_FILE}
 	#	if [ -f $RESULT_FILE ];then
 	#		rm $RESULT_FILE
@@ -92,10 +93,10 @@ register_operation() {
 command_operation(){
 
 	local PAGE=lteCommand.do
-	local COOKIE_FILE=/tmp/$1_commandCookie.txt
-	local RESULT_FILE=/tmp/$1_commandResult.txt
-	local COMMAND_FILE=/tmp/$1_command.txt
-	local COMMAND_FILE_RE=/tmp/$1_command_record.log
+	local COOKIE_FILE=/tmp/commandCookie_$1.txt
+	local RESULT_FILE=/tmp/commandResult_$1.txt
+	local COMMAND_FILE=/tmp/command_$1.txt
+	local COMMAND_FILE_RE=/tmp/command_record_$1.log
 	local URL_PATH=$2
 	local URL_DEFAULT=$3
 		
