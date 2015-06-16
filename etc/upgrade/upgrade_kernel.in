@@ -157,7 +157,6 @@ get_new_kernel_time() {
 #
 get_uname_time(){
     local var=$(uname -v |awk -F 'SMP ' '{print $2}' 2>/dev/null)
-    #local var="Mon Jun 8 13:59:18 EDT 2015"
     local time=$(date -d "${var}" -u +'%F')
 
     echo ${time}
@@ -176,6 +175,7 @@ compare_uname_time() {
     else
         upgrade_echo_logger "kernel_upgrade" \
             "not need upgrade kernel"
+        return 0
     fi
 }
 

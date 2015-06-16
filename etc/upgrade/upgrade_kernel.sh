@@ -22,14 +22,8 @@ do_upgrade() {
 
 main() {
     local version=$1
-    local upgrade_kernel=$2; shift 2
 
-    if [[ "${upgrade_kernel}" == "yes" ]];then
-        do_upgrade ${version}
-    else
-	    upgrade_echo_logger "kernel_upgrade" \
-        	"__UPGRADE_KERNEL__=no"
-    fi
+    do_upgrade ${version}
 }
 
 main "$@"
