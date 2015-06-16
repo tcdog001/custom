@@ -14,23 +14,23 @@ readonly USER_PASSWD=autelanauteviewlms:autelanauteviewlms20140925
 
 reg_check(){
 
-	local CURLE_OK=0
-	local CURLE_COULDNT_CONNECT=7
-	local CURLE_COULDNT_RESOLVE_HOST=6
-	local RECONNECTION_INTERVAL=5
-	local COOKIE_FILE=$1
-	local url=$2
-	local RESULT_FILE=$3
-	local RESPONSE_FILE=$4
+	local curl_ok=0
+	local curl_couldnt_connect=7 
+	local curl_couldnt_resolve_host=6  
+	local reconnection_interval=5  
+	local cookie_file="$1"
+	local url="$2"
+	local result_file="$3"  
+	local response_file="$4"  
 
 	while true
 	do
-		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d @$FILE_REGISTER -s  -c ${COOKIE_FILE}  ${url} > ${RESULT_FILE}
+		curl  -k  -cert ${CERTIFICATE}  -u ${USER_PASSWD}  -H "Content-type: application/json"  -X POST  -d @${FILE_REGISTER} -s  -c ${cookie_file}  ${url} > ${result_file}
 		response=$?
-		echo response=$response > ${RESPONSE_FILE}
-		#		if [ $response -eq $CURLE_COULDNT_CONNECT ] || [ $response -eq $CURLE_COULDNT_RESOLVE_HOST ];then
-		if [ $response != $CURLE_OK ]; then
-			sleep $RECONNECTION_INTERVAL
+		echo response=${response} > ${response_file}
+		#		if [ $response -eq ${curl_couldnt_connect} ] || [ $response -eq ${curl_couldnt_resolve_host} ]; then
+		if [ ${response} != ${curl_ok} ]; then
+			sleep ${reconnection_interval}
 		else
 			break
 		fi
@@ -40,7 +40,9 @@ reg_check(){
 
 reg_print_result(){
 
-	out=`cat $1|jq '.code'`
+	local result_file=$1
+
+	out=`cat ${result_file} |jq '.code'`
 	case $out in
 		0) 
 			echo "register success!"
@@ -56,84 +58,84 @@ reg_print_result(){
 
 register_operation() {
 
-	local PAGE=lteRegister.do
-	local COOKIE_FILE=/tmp/registerCookie_$1.txt
-	local RESULT_FILE=/tmp/registerResult_$1.txt
-	local RESPONSE_FILE=/tmp/registerResponse_$1.txt
-	local URL_PATH=$2
-	local URL_DEFAULT=$3
+	local page=lteRegister.do
+	local cookie_file=/tmp/registerCookie_$1.txt
+	local result_file=/tmp/registerResult_$1.txt
+	local response_file=/tmp/registerResponse_$1.txt
+	local url_path=$2
+	local url_default=$3
 
-	if [ -f $RESULT_FILE ];then
-		rm $RESULT_FILE
+	if [ -f ${result_file} ]; then
+		rm ${result_file}
 	fi
 
-	while [ ! -f $FILE_REGISTER ]; do
+	while [ ! -f ${FILE_REGISTER} ]; do
 		sleep 5
 	done
 
-	if [ -f $FILE_REGISTER ];then
-		if [ -s $URL_PATH ];then
-			url_path=`cat $URL_PATH |jq -j '.url'`
-			url=${url_path}${PAGE}
+	if [ -f ${FILE_REGISTER} ]; then
+		if [ -s ${url_path} ]; then
+			url_path=`cat ${url_path} |jq -j '.url'`
+			url=${url_path}${page}
 		else
-			url=$URL_DEFAULT${PAGE}
+			url=${url_default}${page}
 		fi
-		reg_check  ${COOKIE_FILE} ${url} ${RESULT_FILE}  ${RESPONSE_FILE}
-		rm -f ${RESPONSE_FILE}
+		reg_check  ${cookie_file} ${url} ${result_file}  ${response_file}
+		rm -f ${response_file}
 	
-		reg_print_result ${RESULT_FILE}
-	#	if [ -f $RESULT_FILE ];then
-	#		rm $RESULT_FILE
+		reg_print_result ${result_file}
+	#	if [ -f $result_file ];then
+	#		rm $result_file
 	#	fi
 	else
-		echo $FILE_REGISTER" is not exist!"
+		echo ${FILE_REGISTER}" is not exist!"
 	fi
 }
 
 command_operation(){
 
-	local PAGE=lteCommand.do
-	local COOKIE_FILE=/tmp/commandCookie_$1.txt
-	local RESULT_FILE=/tmp/commandResult_$1.txt
-	local COMMAND_FILE=/tmp/command_$1.txt
-	local COMMAND_FILE_RE=/tmp/command_record_$1.log
-	local URL_PATH=$2
-	local URL_DEFAULT=$3
-		
-	if [ -f $FILE_REGISTER ];then
-		if [ -s $URL_PATH ];then
-			url_path=`cat $URL_PATH |jq -j '.url'`
-			url=${url_path}${PAGE}
+	local page=lteCommand.do
+	local cookie_file=/tmp/commandCookie_$1.txt
+	local result_file=/tmp/commandResult_$1.txt
+	local command_file=/tmp/command_$1.txt
+	local command_file_re=/tmp/command_record_$1.log
+	local url_path=$2
+	local url_default=$3
+	
+	if [ -f ${FILE_REGISTER} ];then
+		if [ -s ${url_path} ];then
+			url_path=`cat ${url_path} |jq -j '.url'`
+			url=${url_path}${page}
 		else
-			url=${URL_DEFAULT}${PAGE}
+			url=${url_default}${page}
 		fi
-		echo url=$url
+		echo url=${url}
 
 		macKey='{"mac":'
-		macValue=`cat $FILE_REGISTER |jq '.mac'`
+		macValue=`cat ${FILE_REGISTER} |jq '.mac'`
 		endChar='}'
 		mac=${macKey}${macValue}${endChar}
-		echo mac=$mac
+		echo mac=${mac}
 
-		curl  -k  -cert $CERTIFICATE  -u $USER_PASSWD  -H "Content-type: application/json"  -X POST  -d $mac  -s  -c $COOKIE_FILE  $url > $RESULT_FILE
+		curl  -k  -cert ${CERTIFICATE}  -u ${USER_PASSWD}  -H "Content-type: application/json"  -X POST  -d ${mac}  -s  -c ${cookie_file}  ${url} > ${result_file}
 
-		out=`cat $RESULT_FILE |jq -j '.cmd'`
-		if [ -f $RESULT_FILE ];then
-	                rm $RESULT_FILE
+		out=`cat ${result_file} |jq -j '.cmd'`
+		if [ -f ${result_file} ]; then
+	                rm ${result_file}
 	        fi
-		echo out=$out
-		result=`echo "$out" |base64 -d`
-		echo $result |tr ";" "\n" > $COMMAND_FILE 
-		cat $COMMAND_FILE | while read myCommand
+		echo out=${out}
+		result=`echo "${out}" |base64 -d`
+		echo ${result} |tr ";" "\n" > ${command_file} 
+		cat ${command_file} | while read myCommand
 		do
-	 		echo "Command:"$myCommand
-	 		echo "Get the Command :"$myCommand";time is :"`date`>> $COMMAND_FILE_RE
+	 		echo "Command:"${myCommand}
+	 		echo "Get the Command :"${myCommand}";time is :"`date`>> ${command_file_re}
 			logger "platform" "command:$myCommand"
 
-			eval "$myCommand"
+			eval "${myCommand}"
 		done
-		if [ -f $COMMAND_FILE ];then
-			rm $COMMAND_FILE
+		if [ -f ${command_file} ];then
+			rm ${command_file}
 		fi
 	else
 		logger "platform" "$FILE_REGISTER is not exist!"
