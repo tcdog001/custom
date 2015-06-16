@@ -20,7 +20,7 @@ rsync_action() {
 	local port="873"
 	local timeout="300"
 
-	local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
+	#local sshparam="sshpass -p ${pass} ssh -l ${user} -o StrictHostKeyChecking=no"
 	local rsync_dynamic=" --timeout=${timeout}"
 	local rsync_static="-acz --delete --force --stats --partial"
 	local pass="--password-file=/etc/rsyncd.pass"
@@ -133,6 +133,7 @@ save_device_group() {
 	else
 		echo "default" > ${group_file} 2>/dev/null
 	fi
+	fsync ${group_file}
 }
 
 get_device_group() {
@@ -183,7 +184,7 @@ website_upgrade() {
 		# get device group and set config file name
 		#
 		website_groups_config || return $?
-		echo "website_config_file=${website_config_file}"
+		#echo "website_config_file=${website_config_file}"
 		
 		#
 		# get config
