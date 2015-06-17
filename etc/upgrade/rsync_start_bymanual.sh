@@ -60,6 +60,13 @@ main() {
 	fi
 	json="${json},\"pass\":\"${hash[pass]}\""
 
+	if [ "${__UPGRADE_KERNEL__}" = "no" ]; then
+		upgrade_kernel="no"	
+	else
+		upgrade_kernel="yes"
+	fi
+	json="${json},\"upgrade_kernel\":\"${upgrade_kernel}\""
+
 	json="{${json}}"
 	${__ROOTFS__}/etc/upgrade/rsync_task.sh "${json}" &
 }

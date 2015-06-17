@@ -610,6 +610,14 @@ rsync_task() {
 		pass=${RSYNC_PASS}
 	fi
 	
+	#
+	# check if upgrade kernel, get __UPGRADE_KERNEL__
+	#
+	upgrade_kernel=$(echo ${json} | jq -j '.upgrade_kernel|strings')
+	if [ -z "${upgrade_kernel}" ];then
+		upgrade_kernel=yes
+	fi
+	
 	local fsm="$(rsync_getvalue ${obj} ${version} 'fsm')"
 	local error="$(rsync_getvalue ${obj} ${version} 'error')"
 	rsync_echo_logger "start rsync_task with fsm:${fsm} error:${error}"
@@ -625,14 +633,16 @@ rsync_task() {
 		rsync_echo_logger "the rsync version:${version} is ok, start upgrade"
 
 		#
-		# TODO: check if upgrade kernel
+		# check if upgrade kernel
 		#
-		local ret_kernel=""
-		${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}"; ret_kernel=$?
-		if [[ ${ret_kernel} -eq 1 ]]; then
-			upgrade_echo_logger "kernel_upgrade" \
-				"upgrade kernel fail: stop upgrade"
-			exit 1
+		if [[ "${upgrade_kernel}" = "yes" ]]; then
+			local ret_kernel=""
+			${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}"; ret_kernel=$?
+			if [[ ${ret_kernel} -eq 1 ]]; then
+				upgrade_echo_logger "kernel_upgrade" \
+					"upgrade kernel fail: stop upgrade"
+				exit 1
+			fi
 		fi
 		#
 		# start upgrade rootfs, when acc on
@@ -733,14 +743,16 @@ rsync_task() {
 	rsync_echo_logger "rsync_task version:${version} ok, start upgrade"
 
 	#
-	# TODO: check if upgrade kernel
+	# check if upgrade kernel
 	#
-	local ret_kernel2=""
-	${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}"; ret_kernel2=$?
-	if [[ ${ret_kernel2} -eq 1 ]]; then
-		upgrade_echo_logger "kernel_upgrade" \
-			"upgrade kernel fail: stop upgrade"
-		exit 1
+	if [[ "${upgrade_kernel}" = "yes" ]]; then
+		local ret_kernel2=""
+		${__ROOTFS__}/etc/upgrade/upgrade_kernel.sh "${version}"; ret_kernel2=$?
+		if [[ ${ret_kernel2} -eq 1 ]]; then
+			upgrade_echo_logger "kernel_upgrade" \
+				"upgrade kernel fail: stop upgrade"
+			exit 1
+		fi
 	fi
 	#
 	# start upgrade rootfs
