@@ -149,6 +149,7 @@ get_device_group() {
 	for file in $(ls ${dir_groups}/group_* 2>/dev/null| sort -r); do
 		# Get mac's group from group_file
 		[[ ${mac} ]] && group=$(awk -v mac=${mac} '{if ($1==mac) print $2}' ${file} 2>/dev/null)
+		[[ ${group} ]] && break
 	done
 	save_device_group ${group}
 	echo ${group}
