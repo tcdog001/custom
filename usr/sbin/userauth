@@ -2,8 +2,18 @@
 
 . /etc/utils/utils.in
 
-mac="$1"
-group="$2"                          
+#userauth 1 $mac $group                        
+#userauth 2 $mac $json                         
+                                               
+if [ $# -lt 3 ]; then                                
+        echo "userauth version mac [string...]" >> /tmp/log/umdsh.log
+        return 1;             
+fi    
+
+if [ $1 -eq 1 ]; then
+
+mac="$2"
+group="$3"                          
 echo $group
 filepath="/etc/um/group$group"
 
@@ -11,9 +21,26 @@ if [ -f "$filepath" ]; then
 
 onlineValue=`awk '/online/{print $2}'  $filepath`
 flowMax=`awk '/flow/{print $2}'  $filepath`
-rateMax=`awk '/rate/{print $2}'  $filepath`
+rateMax=`awk '/intdownrate/{print $2}'  $filepath`
 rateAvg=$rateMax
 echo "onlineValue=$onlineValue, $flowMax, $rateAvg"
+
+if [[ ! "$flowMax" =~ ^[0-9]+$ ]] ;then
+	echo "flowMax=$flowMax value error!" >> /tmp/log/umdsh.log
+	exit 1	
+fi
+if [[ ! "$onlineValue" =~ ^[0-9]+$ ]] ;then
+	echo "onlineValue=$onlineValue value error!" >> /tmp/log/umdsh.log
+	exit 1	
+fi
+if [[ ! "$rateAvg" =~ ^[0-9]+$ ]] ;then
+	echo "rateAvg=$rageAvg error!" >> /tmp/log/umdsh.log
+	exit 1	
+fi
+if [[ ! "$rateMax" =~ ^[0-9]+$ ]] ;then
+	echo "rateMax=$rateMax error!" >> /tmp/log/umdsh.log
+	exit 1	
+fi
 
 main() {
         local josn                                
@@ -38,5 +65,6 @@ main() {
                                            
 main "$@"   
 else
-    echo "Error:couldn't find $filepath"
+    echo "Error:couldn't find $filepath" >> /tmp/log/umdsh.log
+fi
 fi

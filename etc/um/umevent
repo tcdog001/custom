@@ -1,5 +1,7 @@
 #!/bin/bash
 
+iplist_file="/etc/um/iplist.conf"
+
 do_limit() {
 	local argc=$#
 	local mac="$1"
@@ -11,38 +13,18 @@ do_limit() {
 		return 1
 	fi
 
-	echo todo
-	echo 1. move ip to ipset 'unauth'
-	echo 2. set tc default
-	echo 3. set nginx default
-	if [ $group -eq 1 ]; then
-		if [ ! -f /etc/um/iplist.conf ]; then	
-			echo "Error:there is no /tmp/config/iplist.conf"
-			return 1
-		fi
-		local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  /etc/um/iplist.conf`				
-		sed -i "s/$ip [ ]*$flag/$ip 1/g" /etc/um/iplist.conf 
-		nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
-		/sbin/ipset -A white_list $ip
-	fi
+	#echo todo
+	#echo 1. move ip to ipset 'unauth'
+	#echo 2. set tc default
+	#echo 3. set nginx default
 }
 
 um_init() {
 	echo todo
 	echo 1. init global iptable
 	echo 2. init global ipset
-	iptables -t nat -A PREROUTING  ! -d  192.168.0.1 -p tcp --dport 80 -i eth0.1  -m state --state NEW -j REDIRECT --to-port 3126
 
-	iptables -P  FORWARD DROP
-
-	ipset -N white_list ipmap --network 192.168.0.0/16
-	iptables -A FORWARD  -p udp --dport 53 -m state --state NEW -j ACCEPT
-
-	iptables -A FORWARD  -i eth0.1 -o eth0 -m set ! --match-set  white_list src -j DROP
-	iptables -A FORWARD  -p icmp --icmp-type 8 -j ACCEPT
-	iptables -A FORWARD  -p tcp --dport 443 --syn -m state --state NEW -j ACCEPT
-	iptables -A FORWARD  -p tcp --dport 21 --syn -m state --state NEW -j ACCEPT
-	iptables -A FORWARD  -m state --state ESTABLISHED,RELATED -j ACCEPT
+	/etc/um/iptables_init.sh
 	/etc/um/set_tc.sh
 }
 
@@ -50,6 +32,12 @@ um_fini() {
 	echo todo
 	echo 1. clear global iptable
 	echo 2. clear global ipset 
+
+	iptables -F FORWARD
+	iptables -P  FORWARD ACCEPT
+	iptables -t nat -F PREROUTING
+	ipset -F white_list
+	#/etc/um/set_tc.sh cleanall
 }
 
 do_xbind() {
@@ -64,15 +52,76 @@ do_xbind() {
 }
 
 um_bind() {
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+
+	echo 1. begin bind 
+	echo 2. set ip to nginx
+	echo 3. set ip to ipset 
+
+	if ((2!=argc)); then
+		return 1
+	fi
+
 	do_xbind "$@"
+
 }
 
 um_unbind() {
 	do_xbind "$@"
+
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+
+	if ((2!=argc)); then
+		return 1
+	fi
+
+	echo 1. begin unbind 
+	echo 2. remove ip from nginx
+	echo 3. remove ip from ipset 
+
+	if [ ! -f ${iplist_file} ]; then	
+		echo "Error:there is no ${iplist_file}"
+		return 1
+	fi
+	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	/sbin/ipset -D white_list ${ip}
+	/etc/um/change_tc.sh ${ip} 0
 }
 
 um_auth() {
 	do_limit "$@"
+#	if [ $group -eq 1 ]; then
+	echo 1. begin auth 
+	echo 2. set ip to nginx
+	echo 3. set ip to ipset 
+
+	local argc=$#
+	local mac="$1"
+	local ip="$2"
+	local group="$3"; shift 3
+	local json="$*"
+
+	if ((argc<3)); then
+		return 1
+	fi
+
+	if [ ! -f ${iplist_file} ]; then	
+		echo "Error:there is no ${iplist_flile}"
+		return 1
+	fi
+	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
+	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	/sbin/ipset -A white_list ${ip}
+	/etc/um/change_tc.sh ${ip} ${group}
+#	fi
+
 }
 
 do_offline() {
@@ -93,8 +142,24 @@ um_deauth() {
 	if ((3!=argc)); then
 		return 1
 	fi
+
+	echo 1. begin deauth 
+	echo 2. remove ip from nginx
+	echo 3. remove ip from ipset 
+
+
 	do_limit "${mac}" "${ip}" 0
 	do_offline "${ip}" "${reason}"
+
+	if [ ! -f ${iplist_file} ]; then	
+		echo "Error:there is no ${iplist_file}"
+		return 1
+	fi
+	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
+	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	/sbin/ipset -D white_list ${ip}
+	/etc/um/change_tc.sh ${ip} 0
 }
 
 main() {
