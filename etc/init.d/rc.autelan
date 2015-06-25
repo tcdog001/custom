@@ -63,7 +63,7 @@ main() {
 	
 #	/usr/localweb/.compare_disk.sh &
 
-	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
+#	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
