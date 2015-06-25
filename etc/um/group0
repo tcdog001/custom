@@ -1,6 +1,6 @@
-online 4000
+online 900
 flow 40000
-intdownrate 4000
-intuprate 4000
+intdownrate 400
+intuprate 400
 locdownrate 4000
 locuprate 4000
