@@ -57,8 +57,8 @@ um_bind() {
 	local ip="$2"
 
 	echo 1. begin bind 
-	echo 2. set ip to nginx
-	echo 3. set ip to ipset 
+	#echo 2. set ip to nginx
+	#echo 3. set ip to ipset 
 
 	if ((2!=argc)); then
 		return 1
