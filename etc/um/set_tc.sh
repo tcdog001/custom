@@ -17,11 +17,16 @@ if [ ! -f ${groupfile} ]; then
 	exit 1
 fi
 
-intdownrate=`awk '/intdownrate/{print $2}'  ${groupfile}`
-intuprate=`awk '/intuprate/{print $2}'  ${groupfile}`
-locdownrate=`awk '/locdownrate/{print $2}'  ${groupfile}`
-locuprate=`awk '/locuprate/{print $2}'  ${groupfile}`
+intdownrate=`awk '/wan_rate_down/{print $2}'  ${groupfile}`
+intuprate=`awk '/wan_rate_up/{print $2}'  ${groupfile}`
+locdownrate=`awk '/lan_rate_down/{print $2}'  ${groupfile}`
+locuprate=`awk '/lan_rate_up/{print $2}'  ${groupfile}`
 
+expr ${intdownrate} + ${intuprate} + ${locdownrate} + ${locuprate} &>/dev/null
+if [[ $? -ne 0 ]]; then
+        echo "$filepath value error"
+        exit 1
+fi
 
 ####for down load####
 

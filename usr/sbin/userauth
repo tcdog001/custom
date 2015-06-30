@@ -2,69 +2,148 @@
 
 . /etc/utils/utils.in
 
-#userauth 1 $mac $group                        
-#userauth 2 $mac $json                         
-                                               
-if [ $# -lt 3 ]; then                                
-        echo "userauth version mac [string...]" >> /tmp/log/umdsh.log
-        return 1;             
-fi    
+get_group() {
+	local flow=$1	
+	local rate=$2	
+	local i=0
 
-if [ $1 -eq 1 ]; then
+	while [ -f "/etc/um/group${i}" ]
+	do
+	    local tmpflow=`awk '/wan_flow_all/{print $2}'  /etc/um/group${i}`
+	    local tmprate=`awk '/wan_rate_down/{print $2}'  /etc/um/group${i}`
+	    //算数表达式
+	    if ((flow>=tmpflow && rate==tmprate)); then
+	   	echo "$((i+1))" 
+	   	return  
+	    fi
+       	    ((i++))
+	done
+	echo "0"
+	return
+}
+do_umc_command() {
+	local mac=$1
+	local group=$2
+	local filepath=/etc/um/group"${group}" 
+	
+	if [ ! -f ${filepath} ]; then
+		return 1
+	fi
 
-mac="$2"
-group="$3"                          
-echo $group
-filepath="/etc/um/group$group"
+	local lan_online=`awk '/lan_online/{print $2}'  $filepath`
+	local wan_online=`awk '/wan_online/{print $2}'  $filepath`
 
-if [ -f "$filepath" ]; then 
+	local lan_flow_up=`awk '/lan_flow_up/{print $2}'  $filepath`
+	local lan_flow_down=`awk '/lan_flow_down/{print $2}'  $filepath`
+	local lan_flow_all=`awk '/lan_flow_all/{print $2}'  $filepath`
+	local wan_flow_up=`awk '/wan_flow_up/{print $2}'  $filepath`
+	local wan_flow_down=`awk '/wan_flow_down/{print $2}'  $filepath`
+	local wan_flow_all=`awk '/wan_flow_all/{print $2}'  $filepath`
 
-onlineValue=`awk '/online/{print $2}'  $filepath`
-flowMax=`awk '/flow/{print $2}'  $filepath`
-rateMax=`awk '/intdownrate/{print $2}'  $filepath`
-rateAvg=$rateMax
-echo "onlineValue=$onlineValue, $flowMax, $rateAvg"
+	local lan_rate_down=`awk '/lan_rate_down/{print $2}'  $filepath`
+	local lan_rate_up=`awk '/lan_rate_up/{print $2}'  $filepath`
+	local wan_rate_down=`awk '/wan_rate_down/{print $2}'  $filepath`
+	local wan_rate_up=`awk '/wan_rate_up/{print $2}'  $filepath`	
+	
+	expr ${lan_online} +  ${wan_online} + ${lan_flow_up} + ${lan_flow_down} + ${lan_flow_all} \
+	     + ${wan_flow_up} + ${wan_flow_down} + ${wan_flow_all} + ${lan_rate_down} \
+	     + ${lan_rate_up} + ${wan_rate_down} + ${wan_rate_up} &>/dev/null
 
-if [[ ! "$flowMax" =~ ^[0-9]+$ ]] ;then
-	echo "flowMax=$flowMax value error!" >> /tmp/log/umdsh.log
-	exit 1	
-fi
-if [[ ! "$onlineValue" =~ ^[0-9]+$ ]] ;then
-	echo "onlineValue=$onlineValue value error!" >> /tmp/log/umdsh.log
-	exit 1	
-fi
-if [[ ! "$rateAvg" =~ ^[0-9]+$ ]] ;then
-	echo "rateAvg=$rageAvg error!" >> /tmp/log/umdsh.log
-	exit 1	
-fi
-if [[ ! "$rateMax" =~ ^[0-9]+$ ]] ;then
-	echo "rateMax=$rateMax error!" >> /tmp/log/umdsh.log
-	exit 1	
-fi
+	if [ $? -ne 0 ]; then
+                echo "Error: value in group${group} not a figure!" 
+		return 1
+	fi
 
-main() {
-        local josn                                
-                                                   
-       #json=$(json_create wan/online/max $onlineValue wan/flow/up/max $flowMax wan/flow/down/max $flowMax wan/flow/all/max $flowMax wan/rate/up/max $rateMax wan/rate/up/avg $rateAvg wan/rate/down/max $rateMax wan/rate/down/avg $rateAvg wan/rate/all/max $rateMax wan/rate/all/avg $rateAvg) 
-       json=$(json_create \
-       wan/online/max $onlineValue \
-       wan/flow/up/max $flowMax \
-       wan/flow/down/max $flowMax \
-       wan/flow/all/max $flowMax \
-       wan/rate/up/max $rateMax \
-       wan/rate/up/avg $rateAvg \
-       wan/rate/down/max $rateMax \
-       wan/rate/down/avg $rateAvg \
-       wan/rate/all/max $rateMax \
-       wan/rate/all/avg $rateAvg) 
-        
-        json=$(echo ${json} | jq -j -c .)                              
-        echo "umc auth $mac $group $json"    
-        umc auth $mac $group "$json"        
-}                                          
-                                           
-main "$@"   
-else
-    echo "Error:couldn't find $filepath" >> /tmp/log/umdsh.log
-fi
-fi
+        json=$(json_create \
+       lan/online/max ${lan_online} \
+       lan/flow/up/max ${lan_flow_up} \
+       lan/flow/down/max ${lan_flow_down} \
+       lan/flow/all/max ${lan_flow_all} \
+       lan/rate/up/max ${lan_rate_up} \
+       lan/rate/up/avg ${lan_rate_up} \
+       lan/rate/down/max ${lan_rate_down} \
+       lan/rate/down/avg ${lan_rate_down} \
+       lan/rate/all/max ${lan_rate_down} \
+       lan/rate/all/avg ${lan_rate_down} \
+        wan/online/max ${wan_online} \
+        wan/flow/up/max ${wan_flow_up}x \
+        wan/flow/down/max ${wan_flow_down} \
+        wan/flow/all/max ${wan_flow_all} \
+        wan/rate/up/max ${wan_rate_up} \
+        wan/rate/up/avg ${wan_rate_up} \
+        wan/rate/down/max ${wan_rate_down} \
+        wan/rate/down/avg ${wan_rate_down} \
+        wan/rate/all/max ${wan_rate_down} \
+        wan/rate/all/avg ${wan_rate_down})
+
+        json=$(echo ${json} | jq -j -c .)
+        echo "umc auth $mac $group $json"
+        umc auth "${mac}" "${group}" "${json}"
+}
+uauth_ver2() {
+	#userauth 2 mac group 
+
+	local argc=$#
+	local mac=$2
+	local group=$3
+
+	if ((3!=argc)); then
+		return 1
+	fi
+
+	do_umc_command ${mac} ${group}
+}
+
+uauth_ver3() {
+	#userauth 3 mac json
+	return 
+}
+
+uauth_ver1() {
+#userauth 1 mac
+	
+	local mac=$2
+	local argc=$#
+
+	if((2!=argc)); then
+		return 1
+	fi
+
+	local online=`umc show "{\"mac\":\"$mac\"}"`
+
+ 	local tmpmac=`echo $oneline | jq .mac`
+
+	if [[ "$mac" != "$tmpmac" ]]; then
+		do_umc_command ${mac} 0
+		return 0 
+	fi	
+
+        local reason=`echo $oneline | jq .reason`
+	if [[ "$reason" != "flowlimit" ]]; then	
+		do_umc_command ${mac} 0
+		return 0 
+   	fi		
+
+	local wan_flow_all=`echo $oneline | jq .limit.wan.flow.all`
+	local wan_rate_down=`echo $oneline | jq .limit.wan.rate.down`
+
+	local group=$(get_group "${wan_flow_all}" "${wan_rate_down}")
+	
+	do_umc_command ${mac} ${group}
+	return 0
+}
+
+main(){
+	local version=$1
+
+	case ${version} in
+		1|2|3)
+		uauth_ver${version} "$@"
+		;;
+	*)
+		return 1
+		;;
+	esac	
+
+}
+main "$@"

@@ -96,7 +96,6 @@ um_unbind() {
 
 um_auth() {
 	do_limit "$@"
-#	if [ $group -eq 1 ]; then
 	echo 1. begin auth 
 	echo 2. set ip to nginx
 	echo 3. set ip to ipset 
@@ -119,8 +118,11 @@ um_auth() {
 	sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 	/sbin/ipset -A white_list ${ip}
-	/etc/um/change_tc.sh ${ip} ${group}
-#	fi
+	if ((group >= 0)); then
+		/etc/um/change_tc.sh ${ip} ${group}
+	else
+		/etc/um/change_tc_json.sh ${ip} ${mac} ${json}
+	fi
 
 }
 

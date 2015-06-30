@@ -27,14 +27,15 @@ function getMac($ip)
   功能：比较/etc/.version中的版本号与tempver的大小。当大于tempver时返回1，小于等于tempver时返回0.
   参数:版本号字符串
 */
-function vercmp($tempver)
+function vercmp()
 {
+	global $markver1;
 	$file_handle = fopen("/etc/.version", "r");
 	$version = fgets($file_handle);
 	$version = trim($version, " \n\r");
 	fclose($file_handle);
 
-	if(strcmp($version,$tempver) > 0)
+	if(strcmp($version,$markver1) > 0)
 		return 1;
 	else 
 		return 0;
@@ -46,15 +47,19 @@ function vercmp($tempver)
 
  **/
 function enable_address($mac) {
-	if(vercmp($markver1) > 0){
-		$shell = "sudo /bin/umc bind $mac $ip";
-		exec($shell, $res);
-		$shell = "sudo /usr/sbin/userauth 1 $mac 0";
+	if(vercmp() > 0){
+		$shell = "sudo /usr/sbin/userauth 1 $mac";
 		exec($shell, $res);
 	}
 	else{
- 		$shell = "sudo /data/app/etc/um/usr_certificate.sh $mac & ";
-		exec($shell, $res);
+		if(file_exists("data/app/etc/um/usr_certificate.sh")){
+ 			$shell = "sudo /data/app/etc/um/usr_certificate.sh $mac & ";
+			exec($shell, $res);
+		}
+		else{
+			$shell = "sudo /sbin/iptables -t mangle -A WiFiDog_eth0.1_Trusted -m mac --mac-source ${mac} -j MARK --set-mark 2";
+			exec($shell, $res);
+		}
 	}
 }
 
