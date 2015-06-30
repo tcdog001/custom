@@ -1,15 +1,15 @@
-lan_online 900
-lan_flow_up 50000000 
-lan_flow_down 50000000 
-lan_flow_all 50000000 
+lan_online 0 
+lan_flow_up 0 
+lan_flow_down 0 
+lan_flow_all 0 
 
 lan_rate_down 4000
 lan_rate_up 4000
 
-wan_online 900
-wan_flow_up 50000000 
-wan_flow_down 50000000 
-wan_flow_all 50000000
+wan_online 1800 
+wan_flow_up 50000 
+wan_flow_down 50000 
+wan_flow_all 50000
 
 wan_rate_down 400
 wan_rate_up 400

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-iplist_file="/etc/um/iplist.conf"
+iplist_file="/tmp/iplist.conf"
 
 do_limit() {
 	local argc=$#
@@ -23,7 +23,8 @@ um_init() {
 	echo todo
 	echo 1. init global iptable
 	echo 2. init global ipset
-
+	
+	cp /etc/um/iplist.conf /tmp/iplist.conf
 	/etc/um/iptables_init.sh
 	/etc/um/set_tc.sh
 }

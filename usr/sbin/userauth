@@ -11,8 +11,7 @@ get_group() {
 	do
 	    local tmpflow=`awk '/wan_flow_all/{print $2}'  /etc/um/group${i}`
 	    local tmprate=`awk '/wan_rate_down/{print $2}'  /etc/um/group${i}`
-	    //算数表达式
-	    if ((flow>=tmpflow && rate==tmprate)); then
+	    if ((flow>=tmpflow*1000 && rate==tmprate)); then
 	   	echo "$((i+1))" 
 	   	return  
 	    fi
@@ -113,19 +112,19 @@ uauth_ver1() {
 
  	local tmpmac=`echo $oneline | jq .mac`
 
-	if [[ "$mac" != "$tmpmac" ]]; then
+	if [[ "\"$mac\"" != "$tmpmac" ]]; then
 		do_umc_command ${mac} 0
 		return 0 
 	fi	
 
         local reason=`echo $oneline | jq .reason`
-	if [[ "$reason" != "flowlimit" ]]; then	
+	if [[ "$reason" != "\"flowlimit\"" ]]; then	
 		do_umc_command ${mac} 0
 		return 0 
    	fi		
 
-	local wan_flow_all=`echo $oneline | jq .limit.wan.flow.all`
-	local wan_rate_down=`echo $oneline | jq .limit.wan.rate.down`
+	local wan_flow_all=`echo $oneline | jq .limit.wan.flow.now`
+	local wan_rate_down=`echo $oneline | jq .limit.wan.rate.max`
 
 	local group=$(get_group "${wan_flow_all}" "${wan_rate_down}")
 	

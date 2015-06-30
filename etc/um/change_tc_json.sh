@@ -25,6 +25,11 @@ intuprate=`echo ${json} | jq limit.wan.rate.up`
 locuprate=`echo ${json} | jq limit.lan.rate.up`
 locdownrate=`echo ${json} | jq limit.lan.rate.down`
 
+$intdownrate=`echo ${intdownrate} | sed 's/\"//g'`
+$intuprate=`echo ${intuprate} | sed 's/\"//g'`
+$locdownrate=`echo ${locdownrate} | sed 's/\"//g'`
+$locuprate=`echo ${locuprate} | sed 's/\"//g'`
+
 echo "$intdownrate  $intuprate $locdownrate $locuprate"
 
 expr ${intdownrate} + ${intuprate} + ${locdownrate} + ${locuprate} &>/dev/null

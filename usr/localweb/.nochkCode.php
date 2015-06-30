@@ -1,8 +1,8 @@
 <?php
 $ip = $_SERVER['REMOTE_ADDR'];
 $mac = getMac($ip);
-enable_address($mac);
 $markver1="1.1.1.0";
+enable_address($mac);
 
 //页面的异步提交，返回
 echo json_encode( array( 'code' => 'ok'));
