@@ -24,7 +24,7 @@ function getMac($ip)
 	}
 }
 /*
-  功能：比较/etc/.version中的版本号与tempver的大小。当大于tempver时返回1，小于等于tempver时返回0.
+  功能：比较/etc/.version中的版本号与tempver的大小。当大于markver1时返回1，小于等于markver1时返回0.
   参数:版本号字符串
 */
 function vercmp()
@@ -52,7 +52,7 @@ function enable_address($mac) {
 		exec($shell, $res);
 	}
 	else{
-		if(file_exists("data/app/etc/um/usr_certificate.sh")){
+		if(file_exists("/data/app/etc/um/usr_certificate.sh")){
  			$shell = "sudo /data/app/etc/um/usr_certificate.sh $mac & ";
 			exec($shell, $res);
 		}
