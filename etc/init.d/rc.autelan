@@ -37,7 +37,8 @@ main() {
 
 	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
 	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
-	/etc/init.d/nginx_start.sh &
+	# move nginx_start.sh to file umevent in function um_init
+	#/etc/init.d/nginx_start.sh &
 	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
 
 	sysctl -p 2>/dev/null
