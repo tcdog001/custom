@@ -93,7 +93,7 @@ um_unbind() {
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 	/sbin/ipset -D white_list ${ip}
-	/etc/um/change_tc.sh ${ip} 0
+	/etc/um/change_tc.sh ${ip} _offline 
 }
 
 um_auth() {
@@ -163,7 +163,7 @@ um_deauth() {
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 	/sbin/ipset -D white_list ${ip}
-	/etc/um/change_tc.sh ${ip} 0
+	/etc/um/change_tc.sh ${ip} _offline 
 }
 
 main() {
