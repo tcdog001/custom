@@ -44,9 +44,12 @@ do_umc_command() {
 	local wan_rate_down=`awk '/wan_rate_down/{print $2}'  $filepath`
 	local wan_rate_up=`awk '/wan_rate_up/{print $2}'  $filepath`	
 	
+	local lan_idle=`awk '/lan_idle/{print $2}' $filepath`
+	local wan_idle=`awk '/wan_idle/{print $2}' $filepath`
+	
 	expr ${lan_online} +  ${wan_online} + ${lan_flow_up} + ${lan_flow_down} + ${lan_flow_all} \
 	     + ${wan_flow_up} + ${wan_flow_down} + ${wan_flow_all} + ${lan_rate_down} \
-	     + ${lan_rate_up} + ${wan_rate_down} + ${wan_rate_up} &>/dev/null
+	     + ${lan_rate_up} + ${wan_rate_down} + ${wan_rate_up} + ${lan_idle} + ${wan_idle} &>/dev/null
 
 	if [ $? -ne 0 ]; then
                 echo "Error: value in group${group} not a figure!" 
@@ -55,6 +58,7 @@ do_umc_command() {
 
         json=$(json_create \
        lan/online/max ${lan_online} \
+       lan/online/idle ${lan_idle} \
        lan/flow/up/max ${lan_flow_up} \
        lan/flow/down/max ${lan_flow_down} \
        lan/flow/all/max ${lan_flow_all} \
@@ -65,6 +69,7 @@ do_umc_command() {
        lan/rate/all/max ${lan_rate_down} \
        lan/rate/all/avg ${lan_rate_down} \
         wan/online/max ${wan_online} \
+        wan/online/idle ${wan_idle} \
         wan/flow/up/max ${wan_flow_up}x \
         wan/flow/down/max ${wan_flow_down} \
         wan/flow/all/max ${wan_flow_all} \
