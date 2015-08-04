@@ -19,14 +19,20 @@ add_timer() {
 }
 
 add_timers() {
-
+	local err=""
+	
 	add_timer get_arplist    0 120 "/usr/sbin/get_arplist.sh 1>/dev/null"
-	add_timer push_syslog   30 120 "/etc/platform/bin/push_syslog.sh 2>/dev/null"
-
+	check_oem_lms; err=$?
+	if [[ ${err} -eq 0 ]]; then
+		add_timer push_syslog   30 120 "/etc/platform/bin/push_syslog_oem.sh 2>/dev/null"
+	else
+		add_timer push_syslog   30 120 "/etc/platform/bin/push_syslog.sh 2>/dev/null"
+		add_timer push_gps     120 300 "/etc/platform/bin/curlhttpgps.sh 2>/dev/null"
+	fi
+	
 	add_timer umc_log        0 300 /usr/sbin/umc_log.sh
 	add_timer md_syslog      0 300 /usr/sbin/systemlog_md.sh
 	add_timer tar_syslog    60 300 /etc/platform/bin/tar_syslog.sh
-	add_timer push_gps     120 300 "/etc/platform/bin/curlhttpgps.sh 2>/dev/null"
 	add_timer rsync_task   180 300 /etc/upgrade/rsync_task.sh
 
 	add_timer ntpclient      0 600 "ntpclient -h cn.pool.ntp.org -s -c 1"
