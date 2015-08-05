@@ -4,52 +4,36 @@
 . ${__ROOTFS__}/etc/upgrade/rsync.in
 
 #
-#$1:idx/buddy/ap
-#[$2:current rootfs]
-#
-get_sysversion() {
-	local idx="$1"
-	local current="$2"
-
-	case ${idx} in
-	ap)
-		${__ROOTFS__}/etc/jsock/jcmd.sh syn cat /etc/.version
-		;;
-	0 | 1 | 2)
-		local suffix
-		if [[ "${idx}" == "${current}" ]]; then
-			suffix="*"
-		fi
-		echo $(get_rootfs_version ${idx})${suffix}
-		;;
-	buddy)
-		echo $(get_rootfs_version $(rootfs_buddy))
-		;;
-	*)
-		echo $(get_rootfs_version $(rootfs_current))
-		;;
-	esac
-}
-
-#
-#$1:idx/buddy/ap
+#$1:idx or buddy or ap
 #
 main() {
 	local idx="$1"
 
-	case ${idx} in
-	all)
-		local current=$(rootfs_current)
+	if [ "ap" == "${idx}" ]; then
+		${__ROOTFS__}/etc/jsock/jcmd_syn.sh cat /etc/.version &
 
-		get_sysversion 0 ${current}
-		get_sysversion 1 ${current}
-		get_sysversion 2 ${current}
-		get_sysversion ap
+		return
+	fi
+
+	case "${idx}" in
+	"0")
+		do_nothing
+		;;
+	"1")
+		do_nothing
+		;;
+	"2")
+		do_nothing
+		;;
+	"buddy")
+		idx=$(rootfs_buddy)
 		;;
 	*)
-		get_sysversion ${idx}
+		idx=$(rootfs_current)
 		;;
 	esac
+
+	echo $(get_rootfs_version ${idx})
 }
 
 main "$@"

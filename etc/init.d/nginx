@@ -19,7 +19,7 @@
 
 PATH=/usr/local/:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME=nginx
-NGINX_BIN=/usr/bin/$NAME
+NGINX_BIN=/usr/sbin/$NAME
 CONFIGFILE=/usr/local/nginx/conf/$NAME.conf
 PIDFILE=/usr/local/nginx/logs/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
@@ -100,7 +100,7 @@ case "$1" in
 		echo -n "Reload service $NAME... "
 
 		if netstat -tnpl | grep -q nginx; then
-			$NGINX_BIN -s reload
+			$NGINX_BIN -s reload -c $CONFIGFILE
 			echo " done"
 		else
 			echo "$NAME is not running, can't reload."

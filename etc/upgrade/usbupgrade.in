@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ -n "${__UPGRADE_USBUPGRADE_IN__}" ]]; then
+if [ -n "${__UPGRADE_USBUPGRADE_IN__}" ]; then
 	return
 else
 	__UPGRADE_USBUPGRADE_IN__="$0"
@@ -9,25 +9,17 @@ fi
 . ${__ROOTFS__}/etc/upgrade/upgrade.in
 
 
-readonly file_usbupgrade_auto=${dir_usb_upgrade}/.usbupgrade_auto
+readonly file_usbupgrade_state=${dir_usb_upgrade}/.usbupgrade_state
 readonly file_usbupgrade_force=${dir_usb_upgrade}/.usbupgrade_force
-
-readonly file_usbupgrade_state=${dir_rootfs_data}/.usbupgrade_state
-
-usbupgrade_logger() {
-	do_logger usbupgrade "$@"
-}
+readonly file_usbupgrade_auto=${dir_usb_upgrade}/.usbupgrade_auto
 
 usbupgrade_echo_logger() {
-	echo_logger usbupgrade "$@"
-}
-
-do_with_usbupgrade_echo_logger() {
-	do_with_cb echo_logger usbupgrade "$@"
+	echo "usbupgrade" "$@"
+	logger "usbupgrade" "$@"
 }
 
 #
-#[$1:state]
+#$1:state
 #
 usbupgrade_state() {
 	local state=$1
@@ -46,56 +38,23 @@ usbupgrade_state() {
 		# set state
 		#
 		if [ "none" == "${state}" ]; then
-			rm -f ${file_usbupgrade_state} \
-				${file_usbupgrade_auto} 2>/dev/null
+			rm -f ${file_usbupgrade_state}
 		else
 			echo ${state} > ${file_usbupgrade_state}
-			fsync ${file_usbupgrade_state}
 		fi
 	fi
-}
-
-#
-#$1:sys or sata is blink
-#$2:other init state
-#
-usbupgrade_blink_one() {
-	local blink=$1
-	local state=$2
-	local sysled=${__ROOTFS__}/usr/sbin/sysled
-	local fixed
-
-	if [[ "sys" == "${blink}" ]]; then
-		fixed="sata"
-	else
-		fixed="sys"
-	fi
-
-	${sysled} ${fixed} ${state}
-
-	for ((;;)); do
-		sleep 1
-
-		if [[ "on" == "${state}" ]]; then
-			state="off"
-		else
-			state="on"
-		fi
-
-		${sysled} ${blink} ${state}
-	done
 }
 
 usbupgrade_ok() {
 	local state="on"
 
-	usbupgrade_state none
+	usbupgrade_state "none"
 
 	for ((;;)); do
 		sleep 1
 
 		sysled sys ${state}
-		if [[ "on" == "${state}" ]]; then
+		if [ "on" == "${state}" ]; then
 			state="off"
 		else
 			state="on"
@@ -107,12 +66,12 @@ usbupgrade_ok() {
 usbupgrade_fail() {
 	local state="on"
 
-	usbupgrade_state none
+	usbupgrade_state "none"
 
 	for ((;;)); do
 		sleep 1
 
-		if [[ "on" == "${state}" ]]; then
+		if [ "on" == "${state}" ]; then
 			state="off"
 		else
 			state="on"
@@ -133,7 +92,7 @@ usbupgrade_bydd() {
 	local err=0
 	local tag
 
-	dd if=${file} of=${partition} &> /dev/null; err=$?
+	dd if=${file} of=${partition} > /dev/null 2>&1; err=$?
 
 	tag=$(get_error_tag ${err})
 	usbupgrade_echo_logger "${tag}: ${partition} by ${file}"
@@ -149,26 +108,17 @@ usbupgrade_rootfs() {
 	local src=${dir_usb_upgrade_rootfs}
 	local dst=$(rootfs_dir ${idx})
 	local err=0
+	local tag
 
-#	remount_rootfs ${idx} rw
-	do_with_usbupgrade_echo_logger rsync_copy ${src} ${dst}; err=$?
-#	remount_rootfs ${idx} ro
+	rsync_copy ${src} ${dst}; err=$?
 
-	if ((0!=idx)); then
-		#
-		# set buddy_version
-		#
-		local version=$(get_rootfs_version ${idx})
-		set_buddy_version ${version} ${idx}
-		usbupgrade_logger "set buddy_version${version}"
-
-		#
-		# try delete verfy file
-		#
-		local verfy=$(rootfs_verfy_file ${idx})
-		rm -f ${verfy} &>/dev/null
-		usbupgrade_logger "delete ${verfy}"
+	local tag
+	if [ "0" != "${err}" ]; then
+		tag="ERROR[${err}]"
+	else
+		tag="OK"
 	fi
+	usbupgrade_echo_logger "${tag}: copy ${src} to ${dst}"
 
 	return ${err}
 }
@@ -176,43 +126,76 @@ usbupgrade_rootfs() {
 usbupgrade_website() {
 	local src=${dir_usb_upgrade_website}
 	local dst=${dir_website_upgrade}
+	local err=0
+	
+	rsync_copy ${src} ${dst}; err=$?
 
-	do_with_usbupgrade_echo_logger rsync_copy ${src} ${dst} || return $?
+        local tag
+        if [ "0" != "${err}" ]; then
+                tag="ERROR[${err}]"
+        else
+                tag="OK"
+        fi
+        usbupgrade_echo_logger "${tag}: copy ${src} to ${dst}"
+
+	return ${err}
 }
 
 usbupgrade_phase1() {
+	local err=0
+
 	#
 	# upgrade bin
 	#
 	local name
-	for name in ${!dev_emmc_bin[@]}; do
+	for name in ${!dev_emmc_bin[*]}; do
 		local file=${dir_usb_upgrade}/${name}
 		local partition=${dev_emmc_bin[${name}]}
 
-		usbupgrade_bydd ${partition} ${file} || return $?
+		usbupgrade_bydd ${partition} ${file}; err=$?
 	done
+
+	#
+	# remount rootfs0
+	#
+	remount_rootfs 0; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
 	#
 	# upgrade rootfs0
 	#
-	usbupgrade_rootfs 0 || return $?
+	usbupgrade_rootfs 0; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
 	#
 	# setup rootfs0's rsync version
 	#
-	rsync_setup_by 0 || return $?
+	rsync_setup_by 0; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
 	#
 	# upgrade buddy
 	#
-	usbupgrade_rootfs ${buddy} || return $?
+	usbupgrade_rootfs ${buddy}; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
 	#
 	# upgrade website
 	#
-	usbupgrade_website || return $?
+	usbupgrade_website; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
-	usbupgrade_state upgrading
+	usbupgrade_state "upgrading"
 	bootm rootfs=${buddy}; sync
 	usbupgrade_echo_logger "${info} ok, will reboot..."
 	${__ROOTFS__}/usr/sbin/sysreboot
@@ -222,26 +205,37 @@ usbupgrade_phase2() {
 	local buddy=$(rootfs_buddy)
 	local err=0
 
-	usbupgrade_rootfs ${buddy} || return $?
-	${__ROOTFS__}/etc/upgrade/upgrade_ap.sh 'usbupgrade' || return $?
+	usbupgrade_rootfs ${buddy}; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
 
-	usbupgrade_state ok
+	${__ROOTFS__}/etc/upgrade/upgrade_ap.sh 'usbupgrade'; err=$?
+	if ((0!=err)); then
+		return ${err}
+	fi
+
+	usbupgrade_state "ok"
 	bootm rootfs=${buddy};
 }
 
-usbupgrade_check() {
-	if [[ ! -d "${dir_usb_upgrade_rootfs}" ]]; then
-		return ${e_noexist}
-	elif [[ ! -f "${file_usbupgrade_auto}" ]]; then
+usbupgrade_need() {
+	local name
+	local file
+
+	if [ ! -d "${dir_usb_upgrade_rootfs}" ]; then
 		return ${e_noexist}
 	fi
 
-	local name
-	for name in ${!dev_emmc_bin[@]}; do
-		if [[ ! -f "${dir_usb_upgrade}/${name}" ]]; then
+	for name in ${!dev_emmc_bin[*]}; do
+		file=${dir_usb_upgrade}/${name}
+
+		if [ ! -f "${file}" ]; then
 			return ${e_noexist}
 		fi
 	done
+
+	echo "need"
 }
 
 #
@@ -253,39 +247,45 @@ usbupgrade() {
 	local tag
 	local info
 
-	#
-	# no usb
-	#
-	usbupgrade_check || return
+	if [ ! -f "${file_usbupgrade_auto}" ]; then
+		return
+	fi
 
-	local version=$(< ${dir_usb_upgrade_rootfs}/etc/.version)
-	local state=$(usbupgrade_state)
-	case ${state} in
-	none)
-		if [[ ! -f "${file_usbupgrade_force}" \
-			&& "${version}" == "$(get_rootfs_version 0)" ]]; then
-			usbupgrade_echo_logger \
-				"usb version:${version}==rootfs0, needn't to upgrade"
+	local version=$(cat ${dir_usb_upgrade_rootfs}/etc/.version)
+	local state="$(usbupgrade_state)"
+	case "${state}" in
+	"none")
+		if [ "need" == "$(usbupgrade_need)" ]; then
+			#
+			# check usb/rootfs0 version
+			#
+			local version_rootfs0=$(get_rootfs_version 0)
+			if [[ "${version}" == "${version_rootfs0}" \
+				&& ! -f "${file_usbupgrade_force}" ]]; then
+				usbupgrade_echo_logger \
+					"version:${version}==rootfs0, needn't to upgrade"
+				return
+			fi
 
-			return
-		fi
+			info="version:${version} phase 1"
+			usbupgrade_echo_logger "${info}..."
 
-		info="version:${version} phase 1"
-		usbupgrade_echo_logger "${info}..."
+			#
+			# upgrade boot/kernel/rootfs0/2
+			#
+			usbupgrade_phase1; err=$?
 
-		#
-		# upgrade boot/kernel/rootfs0/2
-		#
-		usbupgrade_phase1; err=$?
+			tag=$(get_error_tag ${err})
+			usbupgrade_echo_logger "${tag}: ${info}"
 
-		tag=$(get_error_tag ${err})
-		usbupgrade_echo_logger "${tag}: ${info}"
+			if ((0!=err)); then
+				usbupgrade_fail
+			fi
 
-		if ((0!=err)); then
-			usbupgrade_fail
+			return ${e_usbupgrade}
 		fi
 		;;
-	upgrading)
+	"upgrading")
 		info="version:${version} phase 2"
 		usbupgrade_echo_logger "${info}..."
 
@@ -300,20 +300,23 @@ usbupgrade() {
 		if ((0!=err)); then
 			usbupgrade_fail
 		fi
+
+		return ${e_usbupgrade}
 		;;
-	ok)
+	"ok")
 		usbupgrade_echo_logger "OK"
 
 		#
 		# upgrade ok
 		#
 		usbupgrade_ok
+
+		return ${e_usbupgrade}
 		;;
 	*)
 		usbupgrade_echo_logger "bad state:${state}"
 
 		return ${e_inval}
+		;;
 	esac
-
-	return ${e_usbupgrade}
 }

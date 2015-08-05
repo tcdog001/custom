@@ -16,7 +16,7 @@ reset_check() {
 		#
 		# 0: reset is pushed
 		#
-		if [[ "0" == "$(gpio reset)" ]]; then
+		if [ "0" == "$(gpio reset)" ]; then
 			((count++))
 		else
 			count=0

@@ -7,14 +7,14 @@ get_onoff_log() {
 	local line=$( grep -n "" /data/md-on |wc -l )
 	local del_line=$(awk 'BEGIN{printf("%d",'$line'-'2')}')
 
+	if [[ $line -gt 2 ]];then
+		sed -e "1,${del_line}"d /data/md-on -i 2>/dev/null
+	fi
+
 	if [[ -e /data/acc_off.txt ]];then
 		rm -rf /data/acc_off.txt;                             
 		return 0;
 	else
-		if [[ $line -gt 2 ]];then
-			sed -e "1,${del_line}"d /data/md-on -i 2>/dev/null
-		fi
-
 		echo "{\"ontime\":\"${ontime}\",\"offtime\":\"${offtime}\",\"offreason\":\"DROP-OFF\"}" >${file_path}/on-off-${offtime}
 	fi
 }

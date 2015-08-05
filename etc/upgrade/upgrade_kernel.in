@@ -1,0 +1,181 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+. ${__ROOTFS__}/etc/upgrade/upgrade.in
+
+#
+# mkimage -l hi_kernel.bin for checking the file
+#
+mkimage_kernel_file() {
+    local version=$1; shift 1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=${kernel_file_path}/hi_kernel.bin
+    local ret=""
+
+    mkimage -l ${kernel_file} >/dev/null 2>&1; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        return 0
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "version=${version} hi_kernel.bin error"
+        return 1
+    fi
+}
+#
+# check the file hi_kernel.bin
+#
+check_kernel_file() {
+    local version=$1; shift 1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=${kernel_file_path}/hi_kernel.bin
+    local ret=""
+
+    if [[ -f ${kernel_file} ]];then
+        mkimage_kernel_file ${version}; ret=$?
+        if [[ ${ret} -eq 0 ]];then
+            return 0
+        else
+            return 1
+        fi
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "version=${version} hi_kernel.bin is not exist"
+        return 1
+    fi
+}
+#
+# date -d '${new_kernel_time}',check the time of the file .kversion
+#
+date_kversion_file() {
+    local version=$1; shift 1
+    local kversion_file_path=${dir_md_rsync}/${version}/rootfs/etc
+    local kversion_file=${kversion_file_path}/.kversion
+    local new_kernel_time=$(cat ${kversion_file} 2>/dev/null)
+    local ret=""
+
+    date -d "${new_kernel_time}" -u +'%F' >/dev/null 2>&1; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        return 0
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "version=${version} .kversion error"
+        return 1
+    fi
+}
+#
+# check the file /etc/.kversion
+#
+check_kversion_file() {
+    local version=$1; shift 1
+    local kversion_file_path=${dir_md_rsync}/${version}/rootfs/etc
+    local kversion_file=${kversion_file_path}/.kversion
+    local new_kernel_time=$(cat ${kversion_file} 2>/dev/null)
+    local ret=""
+
+    if [[ -f ${kversion_file} ]];then
+        date_kversion_file ${version}; ret=$?
+        if [[ ${ret} -eq 0 ]];then
+            return 0
+        else
+            return 1
+        fi
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "version=${version} .kversion is not exist"
+        return 1
+    fi
+}
+#
+# check the state of acc
+#
+check_acc_state() {
+    local ret=""
+    local acc_file=/data/acc_off.txt
+
+    ls ${acc_file} >/dev/null 2>&1; ret=$?
+    if [[ ${ret} -ne 0 ]];then
+        return 0
+    else
+        return 1
+    fi
+}
+#
+# upgrade the kernel, dd of=/dev/mmcblk0p6 if=
+#
+do_upgrade_kernel() {
+    local version=$1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/image
+    local kernel_file=hi_kernel.bin
+    local ret=""
+
+    upgrade_echo_logger "kernel_upgrade" \
+    	"upgrade start......"
+    dd of=/dev/mmcblk0p6 if=${kernel_file_path}/${kernel_file}; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        upgrade_echo_logger "kernel_upgrade" \
+        	"upgrade OK"
+        return 0
+    else
+	    upgrade_echo_logger "kernel_upgrade" \
+        	"upgrade fail: dd error"
+    	return 1
+    fi
+}
+#
+# check the state of acc, and upgrade kernel version
+#
+upgrade_kernel() {
+    local version=$1
+    local ret=""
+
+    check_acc_state; ret=$?
+    if [[ ${ret} -eq 0 ]];then
+        upgrade_echo_logger "kernel_upgrade" \
+            "need upgrade kernel"
+         do_upgrade_kernel ${version}
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "upgrade fail: ACC OFF"
+        return 1
+    fi
+}
+#
+# get the new kernel time
+#
+get_new_kernel_time() {
+    local version=$1; shift 1
+    local kernel_file_path=${dir_md_rsync}/${version}/rootfs/etc
+    local kversion_file=${kernel_file_path}/.kversion
+    local new_kernel_time=$(cat ${kversion_file} 2>/dev/null)
+    local kernel_time=$(date -d "${new_kernel_time}" -u +'%F')
+
+    echo ${kernel_time}
+}
+#
+# get the kernel time of the curerent version
+# change the time to YY-MM-DD-hh:mm:ss
+#
+get_uname_time(){
+    local var=$(uname -v |awk -F 'SMP ' '{print $2}' 2>/dev/null)
+    local time=$(date -d "${var}" -u +'%F')
+
+    echo ${time}
+}
+#
+# Compare the new version and old version of the time
+# When the new time is greater than the old time, upgrade the kernel
+#
+compare_uname_time() {
+    local version=$1
+    local uname_time=$(get_uname_time)
+    local new_time=$(get_new_kernel_time ${version})
+
+    if [[ "${uname_time}" < "${new_time}" ]];then
+        upgrade_kernel ${version}
+    else
+        upgrade_echo_logger "kernel_upgrade" \
+            "not need upgrade kernel"
+        return 0
+    fi
+}
+

@@ -66,8 +66,8 @@ log() {
 
 do_recover() {
 	local recover=/tmp/.recover.sh
-	local url=ftp://119.29.7.231:9527
-	local userpass=lms:lms4SB!
+	local url=ftp://lms2.autelan.com
+	local userpass=ftpuser:Qwe123!zxc
 	local error status
 	local err=0
 

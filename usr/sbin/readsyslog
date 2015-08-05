@@ -1,9 +1,7 @@
 #!/bin/bash
 
-. ${__ROOTFS__}/etc/upgrade/dir.in
-
 main() {
-	cat ${file_md_ulog}
+	cat /opt/log/sys/md/ulog/messages
 }
 
 main "$@"

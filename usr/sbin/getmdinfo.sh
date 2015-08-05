@@ -29,7 +29,7 @@ get_disk_sn() {
 }
 
 get_gateway_version() {
-	gateway_version="`cat /mnt/hd/website/ver.info 2>/dev/null`"
+	gateway_version="`cat ${__CP_WEBSITE__}/ver.info 2>/dev/null`"
 	if [ -z "$gateway_version" ];then
 		gateway_version=zj1.2
 	fi
@@ -37,28 +37,48 @@ get_gateway_version() {
 }
 
 get_content_version() {
-	content_version="`cat /mnt/hd/website/ver.info 2>/dev/null`"
+	content_version="`cat ${__CP_WEBSITE__}/ver.info 2>/dev/null`"
 	if [ -z "$content_version" ];then
 		content_version=zj1.2
 	fi
 	echo "$content_version"
 }
 
+get_website_group(){
+
+	website_group="`cat /data/.website_group 2>/dev/null`"
+	if [ -z "$website_group" ]; then
+		website_group=default
+	fi
+	echo "$website_group"
+}
+
+get_firmware_Version() {
+	cat /etc/.version 2> /dev/null
+}
+
 get_media_info() {
 	hdparm -i ${dev_hd} > ${HDINFO} 2>/dev/null
+	local firmwareVersion=$(get_firmware_Version)
 	local disk_model=$(get_disk_model)
 	local disk_sn=$(get_disk_sn)
 	local gateway_version=$(get_gateway_version)
 	local content_version=$(get_content_version)
-	printf '"diskModel":"%s","diskSN":"%s","gateWayVersion":"%s","contentVersion":"%s"\n'   \
+	local website_group=$(get_website_group)
+	printf '"firmwareVersion":"%s","diskModel":"%s","diskSN":"%s","gateWayVersion":"%s","contentVersion":"%s","websiteGroup":"%s"\n'   \
+		"${firmwareVersion}" \
 		"${disk_model}" \
 		"${disk_sn}"	\
 		"${gateway_version}"	\
-		"${content_version}"
+		"${content_version}"  \
+		"${website_group}"
 }
 
 main() {
-	get_media_info
+	local json_file=/tmp/mdinfo.json
+
+	[[ ! -f ${json_file} ]] && get_media_info >${json_file}
+	cat ${json_file}
 }
 
 main "$@"

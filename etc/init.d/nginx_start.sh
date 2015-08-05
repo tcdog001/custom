@@ -1,19 +1,19 @@
 #!/bin/sh
 
-if [ ! -x /data/opt/log/nginx ];then 
-	mkdir /data/opt/log/nginx;
+if [ ! -x /opt/log/nginx ];then 
+	mkdir /opt/log/nginx;
 fi
 
-if [ ! -x /data/opt/log/nginx/logs ];then
-	mkdir /data/opt/log/nginx/logs;
+if [ ! -x /opt/log/nginx/logs ];then
+	mkdir /opt/log/nginx/logs;
 fi
 
-if  [ ! -x /data/opt/log/nginx/access ];then
-	mkdir /data/opt/log/nginx/access;
+if  [ ! -x /opt/log/nginx/access ];then
+	mkdir /opt/log/nginx/access;
 fi
 
-if [ ! -x /data/opt/log/nginx/error ];then
-	mkdir /data/opt/log/nginx/error;
+if [ ! -x /opt/log/nginx/error ];then
+	mkdir /opt/log/nginx/error;
 fi                   
 
-nginx -c /usr/local/nginx/conf/nginx.conf -p /data/opt/log/nginx 2>/dev/null;
+nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx 2>/dev/null;

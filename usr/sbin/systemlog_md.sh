@@ -114,7 +114,7 @@ main() {
     jsonstr=$(str_systemlog_md ${jsonstr})
     jsonstr=$(str_systemlog_ap ${jsonstr})
 
-    # dir_opt_log_dev_monitor from /etc/utils/dir.in
+    # dir_opt_log_dev_monitor from etc/upgrade/dir.in
     str_output "{ ${jsonstr} }" "${dir_opt_log_dev_monitor}/${logname}"
 }
 

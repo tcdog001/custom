@@ -1,10 +1,18 @@
 #!/bin/bash
 
+copy_appkey() {
+        mkdir -p /tmp/appkey /tmp/.backtrace
+        cp -fpR /etc/appkey/* /tmp/appkey/
+        appkey reload &> /dev/null
+}
+
 main() {
 	clock_set
-	. /etc/cp1.in
+	. /etc/cp1.in	
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
+
+	copy_appkey
 
 	ifconfig lo up
 	#
@@ -12,7 +20,7 @@ main() {
 	#
 	local mac="$(bootm pcba.mac)"
 	if [ -n "${mac}" ]; then
-		ifconfig eth0 hw ether ${mac}
+        	ifconfig eth0 hw ether ${mac}
 	fi
 	ifconfig eth0 up
 	ifconfig eth0 1.0.0.2 netmask 255.255.255.252
@@ -29,7 +37,8 @@ main() {
 
 	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
 	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
-	/etc/init.d/nginx_start.sh &
+	# move nginx_start.sh to file umevent in function um_init
+	#/etc/init.d/nginx_start.sh &
 	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
 
 	sysctl -p 2>/dev/null
@@ -40,41 +49,42 @@ main() {
 	/bin/chmod -R 777 /mnt/hd/website/
 	/bin/chmod -R 777 /sbin/arp
 
+	/bin/chmod 600 /etc/rsyncd.pass
 	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
 	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
 	/bin/dnsmasq & 2>/dev/null
-
-	/usr/sbin/crond -c /etc/crontabs/
-	xinetd &
-
+	
+	#/usr/sbin/crond -c /etc/crontabs/
+	/etc/platform/bin/godusevpn.sh &
 	#check the last time drop reason
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &
+	
+#	/usr/localweb/.compare_disk.sh &
 
-	#
-	#website move to zjhn/www
-	#
-	#/usr/localweb/.compare_disk.sh &
+#	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
-	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
-
+	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
 	/usr/sbin/auto_reboot_md.sh &
 	#
 	# try start cp's init
 	#
 	if [[ -n "${__CP_DEVMAC__}" ]]; then
-			/etc/init.d/${__CP__}/init.sh 2>/dev/null &
+		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
 	fi
 
-	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
-
+        echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+        
 	#
-	# keep it last !!!
-	#
-	/etc/upgrade/rootfs_init.sh &
+        # keep it last !!!
+        #
+        /etc/upgrade/rootfs_init.sh &
+        
+	#/etc/init.d/ngrok.sh &
 }
 
 main "$@"
+

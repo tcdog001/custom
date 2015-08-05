@@ -3,7 +3,11 @@
 . ${__ROOTFS__}/etc/upgrade/usbupgrade.in
 
 main() {
-	usbupgrade || return $?
+	local err=0
+
+	usbupgrade; err=$?
+
+	return ${err}
 }
 
 main

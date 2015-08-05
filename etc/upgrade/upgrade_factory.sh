@@ -9,18 +9,18 @@
 #
 # Restore factory
 #
-upgrade_factory() {
+upgrade_factory_bydd() {
 	local version=$1
 	local buddy=$(rootfs_buddy)
-	local dev=$(rootfs_dev ${buddy})
+	local dev=dev_rootfs${buddy}
 	local err=0
 
-	upgrade_echo_logger ${FUNCNAME} \
-		"upgrade_task failed[${err}], try dd if=${dev_rootfs0} of=${dev}"
+	upgrade_echo_logger "upgrade_factory" \
+		"upgrade_task failed[${err}], try dd if=${dev_rootfs0} of=${!dev}"
 
-	dd if=${dev_rootfs0} of=${dev}; err=$?
+	dd if=${dev_rootfs0} of=${!dev}; err=$?
 	if ((0!=err)); then
-		upgrade_echo_logger ${FUNCNAME} \
+		upgrade_echo_logger "upgrade_factory" \
 			"dd buddy failed[${err}], try super recover"
 
 		#
@@ -33,7 +33,7 @@ upgrade_factory() {
 			"rootfs1err=0" \
 			"rootfs2err=0"
 	else
-		upgrade_echo_logger ${FUNCNAME} \
+		upgrade_echo_logger "upgrade_factory" \
 			"dd to version:${version}"
 	fi
 
@@ -56,14 +56,13 @@ main() {
 		# upgrade failed, try upgrade by dd
 		#
 		exec_with_flock ${file_lock_upgrade_task} \
-			upgrade_factory ${version}
+			upgrade_factory_bydd ${version}
 	else
 		upgrade_echo_logger "upgrade_factory" \
 			"rollback to version:${version}"
 	fi
 
-	upgrade_echo_logger "upgrade_factory" \
-		"system will reboot"
+	upgrade_echo_logger "upgrade_factory" "system will reboot"
 	${__ROOTFS__}/usr/sbin/sysreboot &
 }
 

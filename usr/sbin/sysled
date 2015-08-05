@@ -16,15 +16,18 @@ usage() {
 main() {
 	local led=$1
 	local action=$2
+	local err=0
 
-	if [[ "2" != "$#" ]]; then
+	if [ "2" != "$#" ]; then
 		usage
 
 		return
 	fi
 
 	case "${led}" in
-	"sys" | "sata")
+	"sys")
+		;;
+	"sata")
 		;;
 	*)
 		echo "no support ${led} led"
@@ -38,20 +41,22 @@ main() {
 		#
 		# 0 is on
 		#
-		gpio ${led}=0 || return $?
+		gpio ${led}=0; err=$?
 		;;
 	"off")
 		#
 		# 1 is off
 		#
-		gpio ${led}=1 || return $?
+		gpio ${led}=1; err=$?
 		;;
 	*)
 		echo "no support ${led} led ${action}"
 
-		return ${e_inval}
+		err=${e_inval}
 		;;
 	esac
+
+	return ${err}
 }
 
 main "$@"

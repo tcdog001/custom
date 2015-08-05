@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/arp.in
+
+main() {
+	local ip="$1"
+
+	if [[ -z "${ip}" ]]; then
+		return 1
+	fi
+
+	echo $(get_mac_byip ${ip})
+}
+
+main "$@"

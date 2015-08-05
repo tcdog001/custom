@@ -1,739 +1,144 @@
 #!/bin/bash
 
-if [[ -n "${__PLATFORM_BIN_PLATFORM_IN__}" ]]; then
+if [ -n "${__PLATFORM_BIN_PLATFORM_IN__}" ]; then
 	return
 else
 	__PLATFORM_BIN_PLATFORM_IN__="$0"
 fi
 
-. ${__ROOTFS__}/etc/upgrade/dir.in
+readonly FILE_REGISTER=/data/.register.json
+readonly FILE_CANCELLATION=/data/.cancellation.json
+readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
+readonly CERTIFICATE=/etc/platform/conf/server.cer
+readonly USER_PASSWD=autelanauteviewlms:autelanauteviewlms20140925
 
-declare -A plt
+reg_check(){
 
-plt_logger() {
-	do_logger platform "$@"
-}
+	local curl_ok=0
+	local curl_couldnt_connect=7 
+	local curl_couldnt_resolve_host=6  
+	local reconnection_interval=5  
+	local cookie_file="$1"
+	local url="$2"
+	local result_file="$3"  
+	local response_file="$4"  
 
-plt_obj_logger() {
-	local obj="$1"; shift
-
-	do_logger "platform:${obj}" "$@"
-}
-
-#
-#$1:obj
-#$2:action
-#$3:errno
-#$4:info...
-#
-plt_obj_error() {
-	local obj="$1"
-	local action="$2"
-	local errno="$3"; shift 3
-	local info="$*"
-
-	local ferror=${plt[action/${obj}/error]}
-	if [[ -n "${ferror}" ]]; then
-		log_with_limit ${ferror} \
-			"$(getnow) ${obj} ${action} error[${errno}]: ${info}"
-	fi
-}
-
-#
-#$1:file
-#
-__check_plt_file() {
-	local file="$1"
-
-	if [[ -n "${file}" && ! -f "${file}" ]]; then
-		plt_logger "${file} not exist!"
-
-		return ${e_noexist}
-	fi
-}
-
-get_mac() {
-	local mac=$(cat $(get_plt_register) | jq -j '.mac|strings' | tr ":" "-")
-		  mac=${mac:-00-00-00-00-00-00}
-
-	echo ${mac}
-}
-
-get_json_mac() {
-	echo "{\"mac\":\"$(get_mac)\"}"
-}
-
-get_startup() {
-	cat /tmp/.startup
-}
-
-#
-#$1:dir
-#
-get_startup_file() {
-	local dir="$1"
-
-	echo "${dir}/startup-$(get_startup)"
-}
-
-get_plt_register() {
-	local file=${plt[cloud/atbus/register]}
-	local i
-
-	for ((i=0; i<300; i++)); do
-		if [[ -f "${file}" ]]; then
+	while true
+	do
+		curl  -k  -cert ${CERTIFICATE}  -u ${USER_PASSWD}  -H "Content-type: application/json"  -X POST  -d @${FILE_REGISTER} -s  -c ${cookie_file}  ${url} > ${result_file}
+		response=$?
+		echo response=${response} > ${response_file}
+		#		if [ $response -eq ${curl_couldnt_connect} ] || [ $response -eq ${curl_couldnt_resolve_host} ]; then
+		if [ ${response} != ${curl_ok} ]; then
+			sleep ${reconnection_interval}
+		else
 			break
 		fi
-
-		sleep 1
 	done
 
-	echo ${file}
 }
 
-#
-#$1:obj
-#
-get_plt_cert() {
-	local obj="$1"
-	local cloud=${plt[action/${obj}/cloud]}
+reg_print_result(){
 
-	echo ${plt[cloud/${cloud}/cert]}
+	local result_file=$1
+
+	out=`cat ${result_file} |jq '.code'`
+	case $out in
+		0) 
+			echo "register success!"
+			;;
+		-1)	
+			echo "user/password error!"
+			;;
+		*) 
+			echo "register fail!"
+			;;
+	esac
 }
 
-#
-#$1:obj
-#
-get_plt_userpass() {
-	local obj="$1"
-	local cloud=${plt[action/${obj}/cloud]}
-	local user=${plt[cloud/${cloud}/user]}
-	local pass=${plt[cloud/${cloud}/pass]}
+register_operation() {
 
-	if [[ -n "${user}" ]]; then
-		echo "${user}:${pass}"
+	local page=lteRegister.do
+	local cookie_file=/tmp/registerCookie_$1.txt
+	local result_file=/tmp/registerResult_$1.txt
+	local response_file=/tmp/registerResponse_$1.txt
+	local url_path=$2
+	local url_default=$3
+
+	if [ -f ${result_file} ]; then
+		rm ${result_file}
 	fi
-}
 
-#
-#$1:obj
-#
-get_plt_url() {
-	local obj="$1"
-	local cloud=${plt[action/${obj}/cloud]}
+	while [ ! -f ${FILE_REGISTER} ]; do
+		sleep 5
+	done
 
-	printf "%s://%s:%s/%s/%s" \
-		${plt[cloud/${cloud}/protocol]} \
-		${plt[cloud/${cloud}/domain]} \
-		${plt[cloud/${cloud}/port]} \
-		${plt[cloud/${cloud}/base]} \
-		${plt[action/${obj}/url]}
-}
-
-#
-#$1:obj
-#
-get_plt_form() {
-	local obj="$1"
-	local opt
-
-	local key
-	for key in ${!plt[@]}; do
-		#
-		# key NOT match prefix:"action/${obj}/form/*"
-		#
-		local leaf=${key#action/${obj}/form/}
-		if [[ "${key}" == "${leaf}" ]]; then
-			continue
+	if [ -f ${FILE_REGISTER} ]; then
+		if [ -s ${url_path} ]; then
+			url_path=`cat ${url_path} |jq -j '.url'`
+			url=${url_path}${page}
+		else
+			url=${url_default}${page}
 		fi
-
-		case ${leaf} in
-		type)
-			opt="${opt} -F type=${plt[${key}]}"
-			;;
-		ident)
-			opt="${opt} -F ident=$(eval ${plt[${key}]})"
-			;;
-		*)
-			do_nothing
-			;;
-		esac
-	done
-
-	echo "${opt}"
-}
-
-#
-#$1:obj
-#$2:input
-#[$3:options...]
-#
-curl_opt() {
-	local obj="$1"
-	local input="$2"; shift 2
-	local options="$*"
-
-	local opt="-s -X POST -w %{http_code} ${options}"
-	if [[ "_" != "${input}" ]]; then
-		opt="${opt} -d ${input}"
-	fi
-
-	local timeout=${plt[action/${obj}/timeout]}
-	if [[ -n "${timeout}" ]]; then
-		opt="${opt} --max-time ${timeout}"
-	fi
-
-	#
-	# when use -k, no use cert
-	#
-#	local cert=$(get_plt_cert ${obj})
-#	if [[ -n "${cert}" ]]; then
-#		opt="${opt} --cert ${cert}"
-#	fi
-
-	local userpass=$(get_plt_userpass ${obj})
-	if [[ -n "${userpass}" ]]; then
-		opt="${opt} -u ${userpass} -k"
-	fi
-
-	local type=${plt[action/${obj}/contenttype]}
-	if [[ -n "${type}" ]]; then
-		opt="${opt} -H \"Content-type:${type}\""
-	fi
-
-	local cookie=${plt[action/${obj}/cookie]}
-	if [[ -n "${cookie}" ]]; then
-		opt="${opt} -c ${cookie}"
-	fi
-
-	local output=${plt[action/${obj}/output]}
-	if [[ -n "${output}" ]]; then
-		opt="${opt} -o ${output}"
-	fi
-
-	local signature=${plt[action/${obj}/signature]}
-	if [[ -n "${signature}" ]]; then
-		opt="${opt} -F \"signature=\$(< ${signature})\""
-	fi
-
-	echo "${opt}"
-}
-
-#
-#$1:obj
-#$2:input
-#[$3:options...]
-#
-curl_post() {
-	local obj="$1"
-	local opt=$(curl_opt "$@")
-
-	local err=0
-	local status
-	local url=$(get_plt_url ${obj})
-	local form=$(get_plt_form ${obj})
-	local action="curl ${opt} ${form} ${url}"
-
-	status=$(eval "${action}"); err=$?
-	if ((0!=err)); then
-		plt_obj_error ${obj} curl ${err}
-
-		return ${err}
-	elif [[ "200" != "${status}" ]]; then
-		plt_obj_error ${obj} curl ${e_bad_httpcode} ${status}
-
-		return ${e_bad_httpcode}
-	fi
-}
-
-plt_do_register() {
-	local obj=register
-	local input="@$(get_plt_register)"
-	local output=${plt[action/${obj}/output]}
-	local interval=${plt[action/${obj}/interval]}
-
-	for ((;;)); do
-		curl_post ${obj} "${input}" \
-			&& break
-
-		sleep ${interval}
-	done
-
-	local code=$(cat ${output} | jq -j '.code')
-	plt_obj_logger ${obj} "response code:${code}"
-	plt_obj_error ${obj} response ${code}
-}
-
-plt_do_command() {
-	local obj=command
-	local input=$(get_json_mac)
-	local output=${plt[action/${obj}/output]}
-	local err=0
-
-	curl_post ${obj} "${input}" || return $?
-
-	local cmdlast=${plt[action/${obj}/cmdlast]}
-	local cmdlist=${plt[action/${obj}/cmdlist]}
-	cat ${output} \
-		| jq -j '.cmd|strings' \
-		| base64 -d \
-		| tr ";" "\n" \
-		> ${cmdlast}
-
-	cat ${cmdlast} >> ${cmdlist}
-
-	while read cmd; do
-		eval "${cmd}"; err=$?
-
-		plt_obj_logger ${obj} "$(get_error_tag ${err}): ${cmd}"
-		plt_obj_error ${obj} cmd ${err} ${cmd}
-	done < ${cmdlast}
-}
-
-plt_do_keepalive() {
-	local obj=keepalive
-	local input=$(get_json_mac)
-	local output=${plt[action/${obj}/output]}
-
-	curl_post ${obj} "${input}" || return $?
-
-	local code=$(cat ${output} | jq -j '.code|strings')
-	plt_obj_logger ${obj} "response code:${code}"
-	plt_obj_error ${obj} response ${code}
-}
-
-declare -A plt_logs
-declare -A plt_functions
-
-#
-#$1:dir
-#[$2:limit, KB]
-#
-log_limit() {
-	local dir="$1"
-	local limit="$2"; limit=${limit:-4096}
-
-	local list=$(ls ${dir}/startup-* 2>/dev/null | sort -r)
-	while [[ -n "${list}" ]]; do
-		local size=$(du -c ${list} | grep total | awk '{print $1}')
-		if ((size<limit)); then
-			return
-		fi
-
-		local first=$(list_first ${list})
-		rm -f ${first}
-		plt_logger "delete ${first}"
-
-		list=$(list_tail ${list})
-	done
-}
-
-#
-#$1:dir
-#$2:log
-#
-get_private_log() {
-	local dir="$1"
-	local log="$2"
-
-	#
-	# get file list by prefix
-	#
-	local prefix=$(getfilename ${log})
-	local files=$(ls ${dir}/${prefix}-* 2>/dev/null | sort -r)
-	if [[ -z "${files}" ]]; then
-		return
-	fi
-
-	#
-	# save to startup files
-	#
-	local file
-	local startup=$(get_startup_file ${dir})
-	for file in ${files}; do
-		cat ${file} >> ${startup}; fsync ${startup}
-	done
-
-	#
-	# merge ${files} to ${new}
-	#
-	local new=${dir_plt_syslog}/${log}
-	for file in ${files}; do
-		cat ${file} >> ${new}
-	done
-
-	#
-	# delete file list
-	#
-	rm -f ${files}; sync
-
-	log_limit ${dir}
-
-	plt_logs[${log}]=${new}
-}
-
-#
-#$1:dir
-#$2:log
-#$3:daemonlog
-#
-get_daemon_log() {
-	local dir="$1"
-	local log="$2"
-	local daemonlog="$3"
-
-	local old=${dir}/${daemonlog}
-	local new=${dir_plt_syslog}/${log}
-	local startup=$(get_startup_file ${dir})
-
-	cp -f ${old} ${new}; >${old}; fsync ${new}
-	cat ${new} >> ${startup}; fsync ${startup}
-
-	log_limit ${dir} 8192
-
-	plt_logs[${log}]=${new}
-}
-
-get_device_info() {
-	do_nothing
-}
-#plt_functions[device.info]=get_device_info
-
-get_car_system_log() {
-	do_nothing
-}
-#plt_functions[car_system.log]=get_car_system_log
-
-get_vcc_quality_log() {
-	get_private_log ${dir_opt_log_vcc} vcc-quality.log
-}
-plt_functions[vcc-quality.log]=get_vcc_quality_log
-
-get_wifi_drop_log() {
-	get_private_log ${dir_opt_log_drop_wifi} wifi-drop.log
-}
-#plt_functions[wifi-drop.log]=get_wifi_drop_log
-
-get_3g_drop_log() {
-	get_private_log ${dir_opt_log_drop_3g} 3g-drop.log
-}
-#plt_functions[3g-drop.log]=get_3g_drop_log
-
-get_gps_drop_log() {
-	get_private_log ${dir_opt_log_drop_gps} gps-drop.log
-}
-#plt_functions[gps-drop.log]=get_gps_drop_log
-
-get_onoff_log() {
-	do_nothing
-}
-#plt_functions[on-off.log]=get_onoff_log
-
-get_flow_user_log() {
-	do_nothing
-}
-#plt_functions[uv_time_flow.log]=get_flow_user_log
-
-get_flow_3g_log() {
-	do_nothing
-}
-plt_functions[3g_flow.log]=get_flow_3g_log
-
-get_squid_access_log() {
-	get_daemon_log ${dir_opt_log_squid_access} squid_access.log squid.log
-}
-#plt_functions[squid_access.log]=get_squid_access_log
-
-get_pv_http_log() {
-	get_daemon_log ${dir_opt_log_squid_access} pv_http.log nginx.log
-}
-plt_functions[pv_http.log]=get_pv_http_log
-
-get_content_update_log() {
-	do_nothing
-}
-#plt_functions[content_update.log]=get_content_update_log
-
-get_software_update_log() {
-	do_nothing
-}
-#plt_functions[software_update.log]=get_software_update_log
-
-get_syslog_filename() {
-	echo "${dir_backup_log}/sys-$(get_mac)-$(getnow).tar.gz"
-}
-
-create_syslog() {
-	local file="$1"
-
-	#
-	# prepare files
-	#
-	local func
-	for func in ${plt_functions[@]}; do
-		${func}
-	done
-
-	#
-	# tar
-	#
-	pushd ${dir_plt_syslog} &> /dev/null
-	rm -f ${file} &> /dev/null
-	tar zcvf ${file} ${!plt_logs[@]} &> /dev/null; fsync ${file}
-	popd &> /dev/null
-
-	rm -f ${plt_logs[@]}
-}
-
-plt_gpslog_prepare() {
-	local startup=$(get_startup_file ${dir_opt_log_gps})
-
-	local file
-	for file in $(ls ${dir_opt_log_gps} | grep gps-); do
-		if [[ -f "${file}" ]]; then
-			cat ${file} >> ${startup}; fsync ${startup}
-
-			mv -f ${file} ${dir_backup_log}/
-		fi
-	done
-	log_limit ${dir_opt_log_gps} 8192
-}
-
-#
-#$1:obj
-#
-plt_syslog_prepare() {
-	local obj="$1" #no used
-
-	local file=$(get_syslog_filename)
-	create_syslog ${file}
-	if [[ -f "${file}" ]]; then
-		mv -f ${file} ${dir_backup_log}/
-	fi
-}
-
-#
-#$1:obj
-#
-plt_log_check() {
-	local obj="$1"
-	local output=${plt[action/${obj}/output]}
-
-	local status=$(cat ${output} | jq -j '.success')
-	plt_obj_logger ${obj} "response status:${status}"
-	if [[ "true" != "${status}" ]]; then
-		return 1
-	fi
-}
-
-#
-#$1:obj
-#
-plt_put_log() {
-	local obj="$1"
-
-	plt_${obj}_prepare
-
-	local file
-	local prefix=${plt[action/${obj}/prefix]}
-	for file in $(ls ${dir_backup_log}/${prefix}-* 2>/dev/null); do
-		local opt
-
-		case ${plt[action/${obj}/form/content]} in
-		string)
-			opt="-F \"content=\$(< ${file})\""
-			;;
-		file)
-			if [[ "sys" == "${prefix}" ]]; then
-				#
-				# sys-2015-01-01-14:00:01.tar.gz
-				#   ==>
-				# 2015-01-01-14-00-01.tar.gz
-				#
-				local newname=$(basename ${file})
-					  newname=${newname#sys-}
-					  newname=${newname//:/-}
-				opt="-F \"content=@${file};filename=${newname};type=text/plain\""
-			else
-				opt="-F \"content=@${file};type=text/plain\""
-			fi
-
-			;;
-		*)
-			continue
-			;;
-		esac
-
-		curl_post ${obj} _ ${opt} \
-			&& plt_log_check ${obj} \
-			&& rm -f ${file}
-	done
-}
-
-plt_do_gpslog() {
-	plt_put_log gpslog || return $?
-}
-
-plt_do_syslog() {
-	plt_put_log syslog || return $?
-}
-
-plt_do_show() {
-	aa_show plt
-}
-
-plt_do_init() {
-	do_nothing
-}
-
-check_plt_file() {
-	local key
-
-	for key in ${!plt[@]}; do
-		local prefix=${key%/__must_exist__}
-		if [[ "${prefix}" == "${key}" ]]; then
-			continue
-		fi
-
-		local name
-		for name in ${plt[${key}]}; do
-			__check_plt_file ${plt[${prefix}/${name}]} || return $?
-		done
-	done
-}
-
-#
-#$1:config file
-#
-plt_cache_create() {
-	local config="$1"
-	local prefix=$(getfilename $(basename ${config}))
-	local file
-
-	pushd ${dir_plt} &> /dev/null
-	file=$(mktemp); mv ${file} ${file}.cache
-	popd &> /dev/null
-
-	echo ${dir_plt}/${file}.cache
-}
-
-
-#
-#$1:config file
-#
-plt_cache_find() {
-	local config="$1"
-
-	touch ${file_plt_cache}
-
-	grep ${config} ${file_plt_cache} | awk '{print $2}'
-}
-
-#
-#$1:config file
-#$2:cache file
-#
-plt_cache_save() {
-	local config="$1"
-	local cache="$2"
-
-	local file=$(plt_cache_find ${config})
-	if [[ -n "${file}" ]]; then
-		delete_file_line_byvalue ${file_plt_cache} ${file}
-	fi
-
-	echo "${config} ${cache}" >> ${file_plt_cache}; fsync ${file_plt_cache}
-}
-
-#
-#$1:cache file
-#
-plt_deserialize() {
-	local cache="$1"
-
-	aa_deserialize plt ${cache}; err=$?
-	if ((0!=err)); then
-		plt_logger "ERROR[${err}]: bad cache file:${cache}"
-
-		return ${err}
-	fi
-}
-
-#
-#$1:config file
-#
-plt_serialize() {
-	local config="$1"
-
-	local cache=$(plt_cache_create ${config})
-	aa_serialize plt ${cache} || return $?
-	plt_cache_save ${config} ${cache}
-}
-
-#
-#$1:json...
-#
-plt_init_byjson() {
-	local json="$*"
-	local err=0
-
-	json_check ${json} || {
-		plt_logger "bad json"
-
-		return ${e_bad_json}
-	}
-
-	json_to_aa plt "${json}"; err=$?
-	if ((0!=err)); then
-		plt_logger "ERROR[${err}]: bad json config"
-
-		return ${err}
-	fi
-}
-
-#
-#$1:config file
-#
-plt_init() {
-	local config="$1"
-
-	local cache=$(plt_cache_find ${config})
-	if [[ -z "${cache}" ]]; then
-		#
-		# init by json
-		#
-		plt_init_byjson $(< ${config}) || return $?
-		plt_serialize ${config} || return $?
+		reg_check  ${cookie_file} ${url} ${result_file}  ${response_file}
+		rm -f ${response_file}
+	
+		reg_print_result ${result_file}
+	#	if [ -f $result_file ];then
+	#		rm $result_file
+	#	fi
 	else
-		#
-		# init by cache
-		#
-		plt_deserialize ${cache} || return $?
+		echo ${FILE_REGISTER}" is not exist!"
 	fi
-
-	check_plt_file || return $?
 }
 
-#
-#$1:action
-#[$2:config file]
-#
-plt_do() {
-	local action="$1"
-	#
-	#1:use __PLATFORM_CONFIG__
-	#2:use $2
-	#3:use default
-	#
-	local config=${__PLATFORM_CONFIG__:-$2}
-		  config=${config:-${__ROOTFS__}/etc/platform/conf/platform.json}
-	if [[ ! -f "${config}" ]]; then
-		do_logger platform \
-			"config:${config} not exist"
+command_operation(){
 
-		return ${e_noexist}
+	local page=lteCommand.do
+	local cookie_file=/tmp/commandCookie_$1.txt
+	local result_file=/tmp/commandResult_$1.txt
+	local command_file=/tmp/command_$1.txt
+	local command_file_re=/tmp/command_record_$1.log
+	local url_path=$2
+	local url_default=$3
+	
+	if [ -f ${FILE_REGISTER} ];then
+		if [ -s ${url_path} ];then
+			url_path=`cat ${url_path} |jq -j '.url'`
+			url=${url_path}${page}
+		else
+			url=${url_default}${page}
+		fi
+		echo url=${url}
+
+		macKey='{"mac":'
+		macValue=`cat ${FILE_REGISTER} |jq '.mac'`
+		endChar='}'
+		mac=${macKey}${macValue}${endChar}
+		echo mac=${mac}
+
+		curl  -k  -cert ${CERTIFICATE}  -u ${USER_PASSWD}  -H "Content-type: application/json"  -X POST  -d ${mac}  -s  -c ${cookie_file}  ${url} > ${result_file}
+
+		out=`cat ${result_file} |jq -j '.cmd'`
+		if [ -f ${result_file} ]; then
+	                rm ${result_file}
+	        fi
+		echo out=${out}
+		result=`echo "${out}" |base64 -d`
+		echo ${result} |tr ";" "\n" > ${command_file} 
+		cat ${command_file} | while read myCommand
+		do
+	 		echo "Command:"${myCommand}
+	 		echo "Get the Command :"${myCommand}";time is :"`date`>> ${command_file_re}
+			logger "platform" "command:$myCommand"
+
+			eval "${myCommand}"
+		done
+		if [ -f ${command_file} ];then
+			rm ${command_file}
+		fi
+	else
+		logger "platform" "$FILE_REGISTER is not exist!"
 	fi
 
-	plt_init ${config} || return $?
-	plt_do_${action} || return $?
 }
