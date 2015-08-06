@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. /etc/platform/bin/check_oem_function.in
+
 #
 # name delay(second) interval(second) command
 #
@@ -25,14 +27,15 @@ add_timers() {
 	check_oem_lms; err=$?
 	if [[ ${err} -eq 0 ]]; then
 		add_timer push_syslog   30 120 "/etc/platform/bin/push_syslog_oem.sh 2>/dev/null"
+		add_timer tar_syslog    60 300 /etc/platform/bin/tar_syslog_oem.sh
 	else
 		add_timer push_syslog   30 120 "/etc/platform/bin/push_syslog.sh 2>/dev/null"
 		add_timer push_gps     120 300 "/etc/platform/bin/curlhttpgps.sh 2>/dev/null"
+		add_timer tar_syslog    60 300 /etc/platform/bin/tar_syslog.sh
 	fi
 	
 	add_timer umc_log        0 300 /usr/sbin/umc_log.sh
 	add_timer md_syslog      0 300 /usr/sbin/systemlog_md.sh
-	add_timer tar_syslog    60 300 /etc/platform/bin/tar_syslog.sh
 	add_timer rsync_task   180 300 /etc/upgrade/rsync_task.sh
 
 	add_timer ntpclient      0 600 "ntpclient -h cn.pool.ntp.org -s -c 1"
