@@ -113,7 +113,7 @@ uauth_ver1() {
 		return 1
 	fi
 
-	local online=`umc show "{\"mac\":\"$mac\"}"`
+	local oneline=`umc show "{\"mac\":\"$mac\"}"`
 
  	local tmpmac=`echo $oneline | jq .mac`
 
