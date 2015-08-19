@@ -50,13 +50,20 @@ cp ${package}/usr/lib/* /usr/lib/
 
 }
 
-cd /mnt/hd/kumihua-server 
-python manage.py runserver 0.0.0.0:8001 &    
-cd /mnt/hd/portal_server
-python manage.py runserver &
+if [ ! -f /usr/bin/django-admin.py ]; then
+	ln -s /mnt/hd/python/bin/django-admin.py /usr/bin/django-admin.py
+fi
+
+if [ -d /mnt/hd/kumihua-server  ]; then
+	cd /mnt/hd/kumihua-server 
+	python manage.py runserver 0.0.0.0:8001 &    
+fi
+if [ -d /mnt/hd/portal_server  ]; then
+	cd /mnt/hd/portal_server
+	python manage.py runserver &
+fi
 
 if [ ! -d /tmp/um ]; then
 	mkdir /tmp/um
 fi
 
-#########################
