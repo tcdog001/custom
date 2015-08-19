@@ -1,0 +1,31 @@
+#!/bin/bash
+
+get_usermac(){
+
+	local user_ip=$1
+	local user_mac=$(arp "${user_ip}" |awk '{print $4}')
+
+	if [[ $(length "${user_mac}") -eq 17 ]]; then
+		echo "${user_mac}"
+	else
+		echo "00:00:00:00:00:00"
+	fi
+}
+
+main(){
+    local shellversion=$1
+	local userIp=$2
+	
+	case "${shellversion}" in
+		1 )
+			userMac=$(get_usermac "${userIp}") 
+			echo "${userMac}"
+			exit
+			;;
+		* )
+			echo "no such shellversion"
+			exit
+			;;
+	esac
+}
+main "$@"

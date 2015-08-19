@@ -1,0 +1,43 @@
+#!/bin/bash
+
+check_current_user_status(){
+
+	local user_ip=$1
+	local result=$(cat /tmp/iplist.conf | awk -F ';' '/'${user_ip}'/{print $1}'| sed -n '1p'|awk '{print $2}')
+
+#	echo "${result}"
+	case "${result}" in
+		0 )
+			echo "1" 
+			exit
+			;;
+		1 )
+			echo 0
+			exit
+			;;
+		* )
+			echo 0
+			exit
+			;;
+	esac
+}
+
+main(){
+
+	local version=$1
+	local user_ip=$2
+	local user_status=" "
+
+	case "${version}" in
+		1 )
+			user_status=$(check_current_user_status "${user_ip}")
+			echo "${user_status}"
+			exit 
+			;;
+		* )
+			echo "no such version"
+			exit 
+			;;
+	esac
+}
+main "$@"

@@ -24,5 +24,9 @@ WHITE="[1;37m"
 
 umask 077
 
+export PYTHONHOME=/mnt/hd/python
+export PYTHONPATH=/mnt/hd/python/lib/python2.7/lib-dynload
+export PATH=$PATH:$PYTHONHOME:$PYTHONPATH
+
 echo "${GREEN}Welcome to HiLinux.${NORMAL}"
 

@@ -28,6 +28,10 @@ um_init() {
 	/etc/init.d/nginx_start.sh
 	/etc/um/iptables_init.sh
 	/etc/um/set_tc.sh
+
+	if [ ! -d /tmp/um ]; then
+	       	mkdir /tmp/um              
+	fi 
 }
 
 um_fini() {
@@ -148,8 +152,9 @@ um_deauth() {
 	fi
 
 	echo 1. begin deauth 
-	echo 2. remove ip from nginx
-	echo 3. remove ip from ipset 
+	echo 2  deauth from ums
+	echo 3. remove ip from nginx
+	echo 4. remove ip from ipset 
 
 
 	do_limit "${mac}" "${ip}" 0
@@ -159,10 +164,18 @@ um_deauth() {
 		echo "Error:there is no ${iplist_file}"
 		return 1
 	fi
+	
+	local result=$(umsc.sh deauth ${mac})
+	if ((result != 0)); then 
+		return 1 
+	fi
+
 	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+
 	/sbin/ipset -D white_list ${ip}
+
 	/etc/um/change_tc.sh ${ip} 0
 }
 
