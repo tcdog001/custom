@@ -40,6 +40,7 @@ add_timers() {
 
 	add_timer ntpclient      0 600 "ntpclient -h cn.pool.ntp.org -s -c 1"
 	add_timer command       60 600 "/etc/platform/bin/command.sh 1>/dev/null"
+	add_timer ums_client    10 300 "umsc.sh update 1>/dev/null"
 	
 
 
