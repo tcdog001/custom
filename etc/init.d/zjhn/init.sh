@@ -5,7 +5,10 @@
 
 main() {
 	check_oem_lms; err=$?
-	[[ ${err} -eq 0 ]] && return ${err}
+	if [[ ${err} -eq 0 ]]; then
+		/usr/localweb/.compare_disk.sh
+		return ${err}
+	fi
 	
 	local init=/etc/init.d/${__CP__}/init.script
 	#
