@@ -25,6 +25,8 @@ um_init() {
 	echo 2. init global ipset
 	
 	cp /etc/um/iplist.conf /tmp/iplist.conf
+	cp /etc/um/urllist.conf /tmp/
+
 	/etc/init.d/nginx_start.sh
 	/etc/um/iptables_init.sh
 	/etc/um/set_tc.sh

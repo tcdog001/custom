@@ -2,6 +2,7 @@
 
 . /etc/platform/bin/syslog_oem.in
 
+dir_tmp_log_backup=${dir_backup_log}
 main() {
 	local err=0
         local output=/tmp/syslog.out
@@ -21,7 +22,7 @@ main() {
 		resource="/${bucket}/${filename}"
 		dateValue=$(TZ=GMT date +'%a, %d %b %Y %H:%M:%S GMT')
 		stringToSign="PUT\n\n${contentType}\n${dateValue}\n${resource}"		
-		signature=`echo -en ${stringToSign} | OPENSSL_CONF=/usr/local/ssl/openssl.cnf /usr/local/bin/openssl sha1 -hmac ${Key} -binary | base64`
+		signature=`echo -en ${stringToSign} | OPENSSL_CONF=/usr/local/ssl/openssl.cnf /usr/local/ssl/bin/openssl sha1 -hmac ${Key} -binary | base64`
 
                 status=$(curl -i -s -q -X PUT -T "${file}" \
                                         -o ${output} \
