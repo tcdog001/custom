@@ -137,8 +137,47 @@ uauth_ver1() {
 	return 0
 }
 
+whitelist() {
+	local mac="$1"
+        local err=""
+	
+	cat /etc/um/macwhitelist.conf 2>/dev/null| grep -i "${mac}" >/dev/null 2>&1;err=$?
+        return ${err}
+}
+
+blacklist() {
+	local mac="$1"
+        local err=""
+	
+	cat /etc/um/macblacklist.conf 2>/dev/null| grep -i "${mac}" >/dev/null 2>&1;err=$?
+        if [[ ${err} -eq 0 ]];then
+                umc deauth ${mac}
+		return 1
+	else
+		return 0
+	fi
+}
+
+maclistswitch() {
+	local switch=""
+	local file=/etc/um/maclistswitch
+
+        switch=$(cat ${file} 2>/dev/null)
+	echo ${switch}
+}
+
 main(){
 	local version=$1
+        local mac=$2
+        local switch=$(maclistswitch)
+        local err=0                         
+                                            
+	if [[ "${switch}" = "white" ]]; then
+		whitelist ${mac}; err=$?
+	elif [[ "${switch}" = "black" ]]; then
+		blacklist ${mac}; err=$?
+	fi
+        [[ ${err} -ne 0 ]] && return ${err}
 
 	case ${version} in
 		1|2|3)

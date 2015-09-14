@@ -1,0 +1,52 @@
+#!/bin/bash
+
+delmac_list() {
+        local mac=$1
+        local list_type=$2
+        local maccontrol_path=/etc/um
+        local macblack_file=${maccontrol_path}/macblacklist.conf
+        local macwhite_file=${maccontrol_path}/macwhitelist.conf
+
+        case ${list_type} in
+                "white")
+                        sed -i "s/${mac}//g" ${macwhite_file}
+                        ;;
+                "black")
+                        sed -i "s/${mac}//g" ${macblack_file}
+                        ;;
+                *)
+                        echo "Parameter error !"
+                        ;;
+        esac
+}
+
+main() {
+        local mac=$1
+        local list_type=$2
+        local command=$3
+        local control_file=/etc/um/maclistswitch
+        local num="$#"
+        local para="$@"
+
+        case ${num} in
+                1) 
+                        if [[ ${para} == "off" ]];then
+                                echo "" > ${control_file}
+                        fi
+                        ;;
+                2)
+                        delmac_list "${mac}" ${list_type}
+                        ;;
+                3)
+                        if [[ "${command}" == "off" ]];then
+                                echo "" > ${control_file}
+                                delmac_list "${mac}" ${list_type}
+                        fi
+                        ;;
+                *)
+                        echo "Parameter error !"
+                        ;;
+        esac
+}
+
+main "$@"
