@@ -36,7 +36,7 @@ gen_auth_json_file() {
 	local userip="$6"
 	local json
 	json=$(json_create \
-		username ${username}${fengxun_append} \
+		username ${username}${local_append} \
 		usermac ${usermac} \
 		devmac ${devmac} \
 		authcode ${authcode}${local_append} \
@@ -175,7 +175,7 @@ umsc_auth() {
 		"${ums_addr}""${auth_url}" \
 		"-s")
 
-	echo "`date` result=${result}" >> ${umsc_log}
+	echo "`date` auth received=${result}" >> ${umsc_log}
 
 	local result_code=$(echo "${result}" | jq -j ".code")
 	case "${result_code}" in
@@ -183,19 +183,15 @@ umsc_auth() {
 			echo "Auth success!($1)"  >> umsc_log
 			result=$(echo "${result}" | jq -j -c .)
 			nouse=$(exec_policy ${result} ${usermac})
+			echo ${result_code} 
+			;;
+		8 )
+			echo "auth return code: ${result_code}" >> ${umsc_log}
 			echo "0"
 			;;
-		-1 )
-			echo "Auth username/passwd error!($1)" >> ${umsc_log}
-			echo "-1"
-			;;
-		-2 )
-			echo "Auth ums related error!($1)" >> ${umsc_log}
-			echo "-2"
-			;;
-		-3)
-			echo "Ahth third-party related error!($1)" >> ${umsc_log}
-			echo "-3"
+		* )
+			echo "auth return code: ${result_code}" >> ${umsc_log}
+			echo ${result_code}  
 			;;
 	esac
 	return 0
@@ -230,22 +226,14 @@ umsc_update() {
 			echo "Update success!($1)"  >> ${umsc_log}
 			echo "0"
 			;;
-		-1 )
-			echo "Update username/passwd error!($1)" >> ${umsc_log}
-			echo "-1"
-			;;
-		-2 )
-			echo "Update ums related error!($1)" >> ${umsc_log}
-			echo "-2"
-			;;
-		-3)
-			echo "Update third-party related error!($1)" >> ${umsc_log}
-			echo "-3"
-			;;
-		-4)
+		7 )
 			echo "Update ask for deauth($1)" >> ${umsc_log}
 			noreturn=$(umc deauth ${usermac})
 			echo "0"
+			;;
+		* )
+			echo "Update error: ${result_code}" >> ${umsc_log}
+			echo "${result_code}"
 			;;
 	esac
 	return 0
@@ -279,23 +267,9 @@ umsc_deauth() {
 			echo "Deauth success!($1)"  >> ${umsc_log}
 			echo "0"
 			;;
-		-1 )
-			echo "Deauth username/passwd error!($1)" >> ${umsc_log}
-			echo "-1"
-			;;
-		-2 )
-			echo "Deauth ums related error!($1)" >> ${umsc_log}
-			echo "-1"
-			;;
-		-3)
-			echo "Deauth third-party related error!($1)" >> ${umsc_log}
-			echo "-1"
-			;;
-		-4)
-			echo "Deauth ask for deauth($1)" >> ${umsc_log}
-			##执行下线命令
-			#noreturn=umc deauth ${usermac}
-			echo "0"
+		* )
+			echo "Deauth error: ${result_code}" >> ${umsc_log}
+			echo "${result_code}"
 			;;
 	esac
 	return 0
