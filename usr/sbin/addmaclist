@@ -1,0 +1,38 @@
+#!/bin/bash
+
+add_mac() {
+        local mac=$1
+        local maclist_file=$2
+        local mac_list=$(cat ${maclist_file} 2>/dev/null)
+        local ret=0
+
+        echo ${mac_list} |grep "${mac}" >/dev/null 2>&1;ret=$?
+        if [[ ${ret} -ne 0 ]];then
+                echo "${mac}" >> ${maclist_file}
+        fi
+}
+
+addmaclist() {
+        local mac=$1
+        local maclist_file=$2; shift 2
+
+        add_mac "${mac}" ${maclist_file}
+}
+
+main() {
+        local mac=$1
+        local list_type=$2; shift 2
+        local maccontrol_path=/etc/um
+        local macblack_file=${maccontrol_path}/macblacklist.conf
+        local macwhite_file=${maccontrol_path}/macwhitelist.conf
+        local control_file=${maccontrol_path}/maclistswitch
+
+        echo "${list_type}" > ${control_file}
+        if [[ "${list_type}" == "white" ]];then
+                addmaclist "${mac}" "${macwhite_file}"
+        else
+                addmaclist "${mac}" "${macblack_file}"
+        fi
+}
+
+main "$@"
