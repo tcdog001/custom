@@ -1,12 +1,12 @@
 #!/bin/bash 
 
-. /etc/um/umsclient.in
+. /etc/um/ums_autelan.in
 
 Ssid="i-shanghai"
 dev_info="/data/.register.json"
 
 pre_auth() {
-#umsc_auth Param: USERNAME USERMAC DEVMAC AUTHCODE SSID USERIP
+#auth Param: USERNAME USERMAC DEVMAC AUTHCODE USERIP
 	local version=$1
 	local userip=$2
 	local usermac=$3
@@ -19,14 +19,17 @@ pre_auth() {
 	fi
 	local json=`cat ${dev_info}`
 	local devmac=$(echo "${json}" | jq -j ".mac")
-
-	local result=$(umsc_auth ${username} ${usermac} ${devmac} ${password} ${Ssid} ${userip})
+	
+	local apLat = $(get_ap_lat)
+	local apLng = $(get_ap_lng)
+	local associateTime = $(get_associate_time ${userip} ${usermac})
+	local apSsid = $(get_ap_ssid ${userip} ${usermac})
+	local result=$(auth ${username} ${password} ${associateTime} ${userip} ${usermac} ${devmac} ${apSsid} ${apLat} ${apLng})
 
 	echo ${result}
 	return 0 
 }
 pre_register() {
-#umsc_register Param: USERNAME	
 	local version=$1
 	local userip=$2
 	local usermac=$3
@@ -37,7 +40,7 @@ pre_register() {
 		return 1 
 	fi
 	
-	local result=$(umsc_register ${username})
+	local result=$(register ${username} ${usermac})
 
 	echo ${result}
 	return ${result}
