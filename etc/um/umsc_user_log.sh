@@ -1,6 +1,6 @@
 #!/bin/bash
 
-UmsUserLog="/tmp/umd/log/ums.log"
+UmsUserLog_path="/tmp/umd/log/"
 TempFile="/tmp/umd/log/umcshow.log.temp"
 TempLogs="/tmp/umd/log/umsc.log.temp"
 UmscLogs="/tmp/umsc.log"
@@ -118,11 +118,13 @@ http_upload_log() {
 	local upload_file=$1
 
 	 local status=$(curl --max-time 180  \
-	 -F upload_file=@${upload_file} \
-	 -o  ${TempLogs} \
+	 -X POST \
+	 -F "upload_file=@${upload_file}" \
+	 -o  ${UmscLogs} \
 	 -s \
          -w  %{http_code}  \
-	 http://192.168.15.22:8282/umlogs/)
+	 http://192.168.15.22:8181/UMS/UploadLog.do)
+
 	 if [ "$status" -eq "200" ];then
 		local outcontent=$(cat ${TempLogs} | jq -j ".success")
                 case ${outcontent} in
@@ -140,16 +142,24 @@ http_upload_log() {
 	 fi
 }
 main() {
+
+	local srcLogFile="/tmp/umd/umscUser.log"
+
 	umc show >> ${TempFile} 
 	while read LINE
 	do
        		local log=$(gen_ums_log "${LINE}") 
-		echo ${log} >> ${UmsUserLog}	
+		echo ${log} >> ${srcLogFile}	
 	done < ${TempFile}			
 
 	rm ${TempFile}
-	
-	http_upload_log ${UmsUserLog}
+
+	local pathDate=`date +%Y/%m/%d`
+	local file=`date +%H/%M/%S`
+	local dstLogFile=${UmsUserLog_path}${pathDate}${file}
+	mv ${srcLogFile} ${dstLogFile}
+
+	http_upload_log ${dstLogFile}
 }
 
 main "$@"
