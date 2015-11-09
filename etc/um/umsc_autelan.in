@@ -11,12 +11,21 @@ register_url="UMS/UserRegister.do"
 auth_url="UMS/UserAuth.do"
 update_url="UMS/UpdateLog.do"
 deauth_url="/UMS/UserDeauth.do"
+macauth_url="/UMS/MacFreeAuth.do"
 
 register_json="/tmp/um/register.json"
 auth_json="/tmp/um/auth.json"
 update_json="/tmp/um/update.json"
 deauth_json="/tmp/um/deauth.json"
+macauth_json="/tmp/um/macauth.json"
 
+get_ap_ssid() {
+	local usermac=$2
+	echo "ishanghai.com"
+}
+get_ap_mac() {
+	echo "22:22:22:22:22:22"
+}
 gen_reg_json_file() {
 	local username="$1"	
 	local apmac="$2"
@@ -83,18 +92,46 @@ gen_update_json_file() {
 }
 
 gen_deauth_json_file() {
-	local usermac="$1"
-	local reason="$2"
-	local json
-	json=$(json_create \
-		usermac ${usermac} \
-		reason ${reason})
-	echo ${json} > ${deauth_json}
+	local associattime=$1
+	local uemac=$2
+	local apmac=$3
+	local apgroup=$4
+	local apssid=$5
+	local aplat=$6
+	local aplng=$7
 
+	local json
+
+	json=$(json_create \
+	        associattime ${associattime} \
+	        uemac ${uemac} \
+		apmac ${apmac} \
+		apgroup ${apgroup} \
+		apssid ${apssid} \
+		aplat ${aplat} \
+		aplng ${aplng})
+
+	echo ${json} > ${macauth_json}
+
+	return 0
+}
+gen_macauth_json_file() {
+	local username="$1"	
+	local apmac="$2"
+	local apssid="$3" 
+	local apgroup="1"
+	local json	
+	json=$(json_create \
+	username ${username}${local_append} \	
+	uemac ${usermac} \
+	apmac ${apmac} \ 
+	apgroup ${apgroup}${local_append} \
+	apssid ${apssid}${local_append})
+	
+	echo "$json" > ${register_json}
 	echo "0"
 	return 0
 }
-
 exec_policy() {
 	local para=$1	
 	local usermac=$2
@@ -156,7 +193,8 @@ register() {
 
 	local use="register Param: USERNAME USERMAC"
 	local username=$1
-	local usermac=$2
+	local apMac=$2
+	local apSsid=$3
 
 	if (($# == 0)); then
 		echo "${use}"  >> ${umsc_log}
@@ -164,8 +202,6 @@ register() {
 		return  1
 	fi
 	
-	local apSsid=$(get_ap_ssid $@) 
-	local apMac=${get_ap_mac $@}
 
 	gen_reg_json_file ${username} ${apMac} ${apSsid}  
 	if (($? != 0)); then
@@ -188,6 +224,43 @@ register() {
 	return ${result_code} 
 }
 
+mac_free_auth() {
+	local associattime=$1
+	local uemac=$2
+	local apmac=$3
+	local apgroup=$4
+	local apssid=$5
+	local aplat=$6
+	local aplng=$7
+
+	gen_macauth_json_file $@		
+
+	local result=$(curl  -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		 -X POST  \
+		-d @"${macauth_json}" \
+		"${ums_addr}""${macauth_url}" \
+		-s)	
+	
+	echo "`date` ${uemac} macauth received=${result}" >> ${umsc_log}
+
+	local result_code=$(echo "${result}" | jq -j ".code")
+	case "${result_code}" in
+		0 )
+			echo "Auth success!($macauth)"  >> umsc_log
+			result=$(echo "${result}" | jq -j -c .)
+			nouse=$(exec_policy ${result} ${uemac})
+			echo "0" 
+			;;
+		
+		* )
+			echo "auth return code: ${result_code}" >> ${umsc_log}
+			echo ${result_code}  
+			;;
+	esac
+
+	return 0
+}
 auth() {
 
 	local use="umsc_auth Param: USERNAME PASSWORD ASSOCIATETIME USERIP USERMAC DEVMAC APSSID APLAT APLNG"

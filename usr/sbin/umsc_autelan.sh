@@ -5,6 +5,51 @@
 Ssid="i-shanghai"
 dev_info="/data/.register.json"
 
+
+get_ap_ssid() {
+	local userip=$1
+        local usermac=$2
+        echo "ishanghai.com"
+	return 
+}
+get_ap_mac() {
+        echo "22:22:22:22:22:22"
+	return 
+}
+get_ap_lat() {
+	echo 11.1111111
+	return 
+}
+get_ap_lng() {
+	echo 22.2222222
+	return 
+}
+get_associate_time() {
+	local userip=$1
+	local usermac=$2
+	echo 1970-01-01T08:00:13Z
+	return 
+}
+
+
+pre_macfreeauth() {
+#auth Param: USERMAC DEVMAC USERIP
+	local version=$1
+	local uemac=$2
+	local apmac=$3
+	local ueip=$4  
+	
+	local associattime=$(get_associat_time ${uemac})##??	
+	local apgroup="autelan"
+	local apssid=$(get_ap_ssid ${ueip} ${uemac})	
+	local aplat=$(get_ap_lat)
+	local aplng=$(get_ap_lng)
+	
+	local result=$(mac_free_auth ${associattime} ${ueip} ${uemac} ${apmac} ${apgroup} ${apssid} ${aplat} ${aplng})
+	echo ${result}
+	
+	return 0 
+}
 pre_auth() {
 #auth Param: USERNAME USERMAC DEVMAC AUTHCODE USERIP
 	local version=$1
@@ -39,8 +84,11 @@ pre_register() {
 		echo "1"
 		return 1 
 	fi
-	
-	local result=$(register ${username} ${usermac})
+
+	local apSsid=$(get_ap_ssid ${userip} ${usermac})
+        local apMac=${get_ap_mac ${userip} ${usermac}}	
+
+	local result=$(register ${username} ${apMac} ${apSsid})
 
 	echo ${result}
 	return ${result}
@@ -92,7 +140,7 @@ main(){
 	#echo "$action $@" 
 
 	case ${action} in 
-		register|auth|update|deauth)
+		register|auth|macfreeauth|update|deauth)
 			result=$(pre_${action} "$@")
 			echo ${result}
 			return 0
