@@ -72,11 +72,10 @@ main() {
 	#
 	# try start cp's init
 	#
-	# NOT support it !!!!!!
 	#
-#	if [[ -n "${__CP_DEVMAC__}" ]]; then
-#		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
-#	fi
+	if [[ -n "${__CP_DEVMAC__}" ]]; then
+		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
+	fi
 
         echo $(date '+%F-%H-%M-%S') > /tmp/.startup
         
