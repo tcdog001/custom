@@ -28,6 +28,10 @@ um_init() {
 	/etc/init.d/nginx_start.sh
 	/etc/um/iptables_init.sh
 	/etc/um/set_tc.sh
+
+	if [ ! -d /tmp/um ]; then
+	       	mkdir /tmp/um              
+	fi 
 }
 
 um_fini() {
@@ -102,15 +106,12 @@ um_auth() {
 	echo 2. set ip to nginx
 	echo 3. set ip to ipset 
 
-	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local group="$3"; shift 3
-	local json="$*"
+	local json="$1"
 
-	if ((argc<3)); then
-		return 1
-	fi
+
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+	local group=`echo ${json} | jq -j -c ".group"`
 
 	if [ ! -f ${iplist_file} ]; then	
 		echo "Error:there is no ${iplist_flile}"
@@ -139,18 +140,17 @@ do_offline() {
 
 um_deauth() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local reason="$3"
-
-	if ((3!=argc)); then
-		return 1
-	fi
+	local json=$1
 
 	echo 1. begin deauth 
-	echo 2. remove ip from nginx
-	echo 3. remove ip from ipset 
+	echo 2  deauth from ums
+	echo 3. remove ip from nginx
+	echo 4. remove ip from ipset 
 
+	
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+	local reason=`echo ${json} | jq -j -c ".reason"`
 
 	do_limit "${mac}" "${ip}" 0
 	do_offline "${ip}" "${reason}"
@@ -159,10 +159,18 @@ um_deauth() {
 		echo "Error:there is no ${iplist_file}"
 		return 1
 	fi
+	
+	local result=$(umsc.sh deauth ${mac})
+	if ((result != 0)); then 
+		return 1 
+	fi
+
 	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+
 	/sbin/ipset -D white_list ${ip}
+
 	/etc/um/change_tc.sh ${ip} 0
 }
 
