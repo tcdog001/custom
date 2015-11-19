@@ -1,0 +1,1 @@
+nginx -s reload   -c /usr/local/nginx/conf/nginx.conf

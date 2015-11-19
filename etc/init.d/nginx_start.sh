@@ -14,6 +14,10 @@ fi
 
 if [ ! -x /opt/log/nginx/error ];then
 	mkdir /opt/log/nginx/error;
-fi                   
+fi
+                   
+if [ ! -f /tmp/urllist.conf ];then
+	cp /etc/um/urllist.conf /tmp/
+fi
 
 nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx 2>/dev/null;

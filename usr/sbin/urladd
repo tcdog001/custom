@@ -1,0 +1,27 @@
+#!/bin/bash
+
+. /etc/utils/dir.in
+
+usage() {
+	echo "usage: addurl [url_keyword] [0|1]"
+	exit 1
+}
+
+if [[ $# -lt 2 ]]; then
+	usage
+fi
+if [[ $2 -ne 0 && $2 -ne 1 ]]; then
+	usage
+fi
+
+main() {
+	local url="$1"
+	local stat="$2"
+	local file=${file_url_conf_tmp}
+	local add_url="~*${url}		${stat};"
+
+	[[ -f ${file} ]] && eval sed -i '/"\~\*$url "/d' ${file}
+	echo ${add_url} >> ${file}
+}
+
+main "$@"

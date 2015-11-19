@@ -32,7 +32,7 @@ umlog_print(){
 		local user_endtime=$(eval ${real_endtime})
 	fi
 
-	printf '{"mac":"%s","IP":"%s","starttime":"%s","endtime":"%s","wifiup":"%s","wifidown":"%s","3Gup":"%s","3Gdown":"%s"}\n' \
+	printf '{"mac":"%s","IP":"%s","starttime":"%s","endtime":"%s","wifiup":%d,"wifidown":%d,"3Gup":%d,"3Gdown":%d}\n' \
 		"${user_mac}"\
 		"${user_ip}"\
 		"${user_starttime}"\

@@ -1,3 +1,5 @@
 #!/bin/bash
 
 readonly file_systemlog_ap=/tmp/.systemlog_ap
+readonly file_url_conf_tmp=/tmp/urllist.conf
+readonly file_url_conf=/etc/um/urllist.conf

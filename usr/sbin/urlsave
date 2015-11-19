@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. /etc/utils/dir.in
+
+cp ${file_url_conf_tmp} ${file_url_conf}

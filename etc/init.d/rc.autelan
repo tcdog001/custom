@@ -1,9 +1,9 @@
 #!/bin/bash
 
 copy_appkey() {
-        mkdir -p /tmp/appkey /tmp/.backtrace
-        cp -fpR /etc/appkey/* /tmp/appkey/
-        appkey reload &> /dev/null
+	mkdir -p /tmp/appkey /tmp/.backtrace
+	cp -fpR /etc/appkey/* /tmp/appkey/
+	appkey reload &> /dev/null
 }
 
 main() {
@@ -37,8 +37,12 @@ main() {
 
 	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
 	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
+
+	#
 	# move nginx_start.sh to file umevent in function um_init
+	#
 	#/etc/init.d/nginx_start.sh &
+
 	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
 
 	sysctl -p 2>/dev/null
@@ -62,9 +66,9 @@ main() {
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &
 	
-#	/usr/localweb/.compare_disk.sh &
+	#/usr/localweb/.compare_disk.sh &
 
-#	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
+	#wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
@@ -72,17 +76,18 @@ main() {
 	#
 	# try start cp's init
 	#
-	#
 	if [[ -n "${__CP_DEVMAC__}" ]]; then
 		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
 	fi
 
-        echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+
+	size_opt_dir > /dev/null
         
 	#
-        # keep it last !!!
-        #
-        /etc/upgrade/rootfs_init.sh &
+	# keep it last !!!
+	#
+	/etc/upgrade/rootfs_init.sh &
         
 	#/etc/init.d/ngrok.sh &
 }

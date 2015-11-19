@@ -1,0 +1,62 @@
+#!/bin/bash
+
+. /etc/upgrade/dir.in
+
+do_operate_next() {
+	local dir="$1"
+	local size="$2"
+	local file
+	
+	echo "${dir} ${size}"
+	for file in $(ls ${dir}/* 2> /dev/null | sort -r); do
+		[[ -f ${file} ]] && {
+			rm ${file}
+		}
+	done
+}
+
+do_operate() {
+	local size="$1"
+	local type="$2"
+	
+	local size_num=0
+	local size_type=""
+	local dir
+	
+	for dir in ${!dir_opt_*}; do
+		[[ -x ${!dir} ]] && size_type=$(du -sh ${!dir} | eval sed -n '/${type}/p' | awk '{print $1}')
+		size_num=$(echo ${size_type} | sed -re 's/[^0-9]*([0-9]*).*$/\1/')
+		#echo "${size_type} ${size_num}"		
+		if [[ ${size_type} && ${size_num} ]]; then
+			[[ ${size_num} -gt ${size} ]] && do_operate_next "${!dir}" "${size_type}"
+		else
+			case ${type} in
+			"K")
+				size_type=$(du -sh ${!dir} | sed -n '/M/p' | awk '{print $1}')
+				size_num=$(echo ${size_type} | sed -re 's/[^0-9]*([0-9]*).*$/\1/')
+				[[ ${size_type} && ${size_num} ]] && do_operate_next "${!dir}" "${size_type}" 
+				;;
+			"M")
+				[[ ${size_num} -gt ${size} ]] && do_operate_next "${!dir}" "${size_type}"
+				;;
+			esac
+		fi
+	done
+
+}
+
+#
+# $1: size, $2: type like "M" or "K"
+#
+main() {
+	local type=M
+	local size=80
+
+	[[ "$1" ]] && size="$1"
+	[[ "$2" = "M" || "$2" = "K" ]] && type="$2"
+	
+	echo "threshold: ${size}${type}"
+	do_operate "${size}" "${type}"
+}
+
+main "$@"

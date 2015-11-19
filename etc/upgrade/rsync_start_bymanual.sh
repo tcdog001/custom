@@ -67,6 +67,13 @@ main() {
 	fi
 	json="${json},\"upgrade_kernel\":\"${upgrade_kernel}\""
 
+	if [ "${__UPGRADE_BOOT__}" = "yes" ]; then
+		upgrade_boot="yes"	
+	else
+		upgrade_boot="no"
+	fi
+	json="${json},\"upgrade_boot\":\"${upgrade_boot}\""
+
 	json="{${json}}"
 	${__ROOTFS__}/etc/upgrade/rsync_task.sh "${json}" &
 }

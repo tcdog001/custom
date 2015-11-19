@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. /etc/utils/dir.in
+
+cat ${file_url_conf_tmp}
