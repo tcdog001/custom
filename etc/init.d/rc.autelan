@@ -70,6 +70,7 @@ main() {
 	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
 
 	size_opt_dir > /dev/null
+	/etc/upgrade/upgrade_boot.sh "$(sysversion)" "600" & > /dev/null
         
 	#
 	# keep it last !!!

@@ -34,7 +34,13 @@ do_upgrade() {
 
 main() {
     local version="$1"
+    local delay="$2"
+    
     local ret=0
+    local time_delay=0
+
+	[[ ${delay} ]] && time_delay=$(echo ${delay} | grep -Eo '[0-9]+')
+	sleep ${time_delay}
 
 	if [[ ${version} ]]; then
 		do_upgrade "${version}"; ret=$?

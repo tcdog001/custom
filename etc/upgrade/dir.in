@@ -422,15 +422,15 @@ mount_rootfs() {
 	do_mount ${dev_rootfs0} ${dir_rootfs0} 3 "no" "-r"
 	case "$(rootfs_current)" in
 	"0")
-		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes"
-		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes"
+		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes" "-w"
+		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes" "-w"
 		;;
 	"1")
 		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "no"
-		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes"
+		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "yes" "-w"
 		;;
 	"2")
-		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes"
+		do_mount ${dev_rootfs1} ${dir_rootfs1} 3 "yes" "-w"
 		do_mount ${dev_rootfs2} ${dir_rootfs2} 3 "no"
 		;;
 	esac
@@ -637,7 +637,7 @@ readonly file_md_ulog=${dir_opt_log_sys_md_ulog}/messages
 mount_rootfs_data() {
 	local err=0
 
-	do_mount ${dev_rootfs_data} ${dir_rootfs_data} 5 "no" || {
+	do_mount ${dev_rootfs_data} ${dir_rootfs_data} 5 "yes" "-w" || {
 		return $?
 	}
 	

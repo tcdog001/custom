@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. /etc/platform/bin/platform.in
 . /etc/upgrade/dir.in 
 
 declare -A logs
