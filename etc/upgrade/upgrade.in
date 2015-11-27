@@ -520,11 +520,14 @@ rootfs_pingpon_fail() {
 	local self_version="$(get_rootfs_version)"
 	local buddy_version="$(get_buddy_version)"
 	local buddy=$(rootfs_buddy)
+	local rsync_state=$(rsync_getvalue 'md' ${buddy_version} 'state')
 	local err=0
 
-	rsync_setvalue "md" "${buddy_version}" "state" "fail"
-	rootfs_notify_agent_upgrade_failed 'md' "${buddy}" "${buddy_version}"
-
+	if [[ "ok" != "${rsync_state}" ]]; then
+		rsync_setvalue "md" "${buddy_version}" "state" "fail"
+		rootfs_notify_agent_upgrade_failed 'md' "${buddy}" "${buddy_version}"
+	fi
+	
 	upgrade_echo_logger "rootfs_pingpon_fail" \
 			"try recover buddy(rootfs${buddy}) use self version:${self_version}"
 	upgrade_with_flock ${self_version}; err=$?
@@ -585,13 +588,14 @@ rootfs_init() {
 
 	local self_version="$(get_rootfs_version)"
 	local buddy_version="$(get_buddy_version)"
+	local rsync_state="$(rsync_getvalue 'md' ${buddy_version} 'state')"
 	#
 	# o:normal
 	# v:maybe after super recover
 	# f:maybe last upgrade copy is break, or other ....
 	#   just recover it use current rootfs's version
 	#
-	if [[ "o" != "${buddy_state}" && "v" != "${buddy_state}" ]]; then
+	if [[ "o" != "${buddy_state}" && "v" != "${buddy_state}" && "ok" = "${rsync_state}" ]]; then
 		upgrade_echo_logger "upgrade" \
 			"rootfs${current}'s buddy is in state:${buddy_state}"
 		upgrade_echo_logger "upgrade" \
