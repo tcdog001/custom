@@ -136,7 +136,6 @@ do_offline() {
 	# todo: update user offline reason
 	#
 }
-
 um_deauth() {
 	local argc=$#
 	local json=$1
@@ -159,11 +158,6 @@ um_deauth() {
 		return 1
 	fi
 	
-	local result=$(umsc.sh deauth ${mac})
-	if ((result != 0)); then 
-		return 1 
-	fi
-
 	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
