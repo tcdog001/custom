@@ -4,10 +4,6 @@ iplist_file="/tmp/iplist.conf"
 
 do_limit() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local group="$3"; shift 3
-	local json="$*"
 
 	if ((argc<3)); then
 		return 1
@@ -48,8 +44,8 @@ um_fini() {
 
 do_xbind() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	#local mac="$1"
+	#local ip="$2"
 
 	if ((2!=argc)); then
 		return 1
@@ -59,8 +55,8 @@ do_xbind() {
 
 um_bind() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	#local mac="$1"
+	#local ip="$2"
 
 	echo 1. begin bind 
 	#echo 2. set ip to nginx
@@ -78,8 +74,7 @@ um_unbind() {
 	do_xbind "$@"
 
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	local json=$1
 
 	if ((2!=argc)); then
 		return 1
@@ -93,6 +88,10 @@ um_unbind() {
 		echo "Error:there is no ${iplist_file}"
 		return 1
 	fi
+
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+
 	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
 	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
 	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
