@@ -1,0 +1,21 @@
+#!/bin/bash
+
+main() {
+	local argc=$#
+	local name="$1"
+
+	if ((1!=argc)); then
+		echo 0
+		return 1
+	fi
+
+	local count=$(ps | grep ${name} | wc -l)
+	if ((count<=2)); then
+		echo 0
+		return 2
+	fi
+
+	ps | grep ${name} | head -n 1 | awk '{print $1}'
+}
+
+main "$@"
