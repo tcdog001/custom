@@ -3,30 +3,26 @@
 getpid() {
 	local name="$1"
 
-	local count=$(ps | grep "${name}" | grep -v smonitor | wc -l)
-        if ((count<=2)); then
+	local count=$(ps | grep "${name}" | grep -v smonitor | grep -v grep | wc -l)
+        if ((0==count)); then
                 echo 0
 	else
-		ps | grep "${name}" | grep -v smonitor | head -n 1 | awk '{print $1}'
+		ps | grep "${name}" | grep -v smonitor | grep -v grep | head -n 1 | awk '{print $1}'
         fi
 }
 
 main() {
 	local argc=$#
 	local name="$1"
-	local pid=0
 
 	if ((1!=argc)); then
 		return 1
 	fi
 
-	while ((0==pid)); do
-		sleep 1
 
-		pid=$(getpid "${name}")
-	done	
+	sleep 3
 
-	smonitorc report "${name}" ${pid}
+	smonitorc report "${name}" $(getpid "${name}")
 }
 
 main "$@"
