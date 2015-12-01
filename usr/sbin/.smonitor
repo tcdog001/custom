@@ -2,13 +2,15 @@
 
 getpid() {
 	local name="$1"
+	local pid=$(ps | grep "${name}" | grep -v smonitor | grep -v grep | head -n 1 | awk '{print $1}')
+	local err
 
-	local count=$(ps | grep "${name}" | grep -v smonitor | grep -v grep | wc -l)
-        if ((0==count)); then
-                echo 0
+	expr ${pid} + 1 &> /dev/null; err=$?
+	if ((0==err)); then
+		echo ${pid}
 	else
-		ps | grep "${name}" | grep -v smonitor | grep -v grep | head -n 1 | awk '{print $1}'
-        fi
+		echo 0
+	fi
 }
 
 main() {
