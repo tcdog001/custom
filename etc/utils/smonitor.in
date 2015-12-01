@@ -5,13 +5,8 @@ if [[ -z "${__UTILS_SMONITOR_IN__}" ]]; then __UTILS_SMONITOR_IN__=_; else retur
 get_smonitor_pid() {
 	local name="$1"
 	local pid=$(ps | grep "${name}" | grep -v smonitor | grep -v grep | head -n 1 | awk '{print $1}')
-	local err
 
-	expr ${pid} + 1 &> /dev/null; err=$?
-	if ((0==err)); then
-		echo ${pid}
-	else
-		echo 0
-	fi
+	expr ${pid} + 1 &> /dev/null || pid=0
+	echo ${pid}
 }
 
