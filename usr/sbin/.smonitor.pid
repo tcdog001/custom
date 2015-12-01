@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/smonitor.in
+
+main() {
+	local argc=$#
+	local name="$1"
+
+	if ((1!=argc)); then
+		echo 0
+	else
+		get_smonitor_pid "${name}"
+	fi
+}
+
+main "$@"

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/utils/smonitor.in
+
+main() {
+	local argc=$#
+	local name="$1"
+
+	if ((1!=argc)); then
+		return 1
+	fi
+
+	sleep 3
+
+	smonitorc report "${name}" $(get_smonitor_pid "${name}")
+}
+
+main "$@"
