@@ -38,10 +38,12 @@ main() {
 
 	route add default gw 1.0.0.1
 
-	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
-	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
-
-	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
+# remove to .smonitor.init
+#	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
+# remove to .smonitor.init
+#	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
+# remove to .smonitor.init
+#	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
 
 	sysctl -p 2>/dev/null
 
@@ -56,10 +58,12 @@ main() {
 	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
 	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
 	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
-	/bin/dnsmasq & 2>/dev/null
+# remove to .smonitor.init
+#	/bin/dnsmasq & 2>/dev/null
 	
 	#/usr/sbin/crond -c /etc/crontabs/
-	/etc/platform/bin/godusevpn.sh &
+# remove to .smonitor.init
+#	/etc/platform/bin/godusevpn.sh &
 	#check the last time drop reason
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &

@@ -3,4 +3,9 @@
 sleep 3
 
 # add monitor to here
+smonitorc insert udhcpd "udhcpd -f /etc/udhcpd.conf"
+smonitorc insert php-fpm "php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/"
+smonitorc insert godusevpn "/etc/platform/bin/godusevpn.sh"
+smonitorc insert dnsmasq "/bin/dnsmasq"
+smonitorc insert sshd "/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22"
 
