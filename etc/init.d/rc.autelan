@@ -1,9 +1,12 @@
 #!/bin/bash
 
-copy_appkey() {
+prepare() {
 	mkdir -p /tmp/appkey /tmp/.backtrace
+
 	cp -fpR /etc/appkey/* /tmp/appkey/
 	appkey reload &> /dev/null
+
+	cp -f /etc/init.d/.smonitor.init /tmp/.smonitor.init
 }
 
 main() {
@@ -12,7 +15,7 @@ main() {
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
 
-	copy_appkey
+	prepare	
 
 	ifconfig lo up
 	#
