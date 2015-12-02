@@ -6,6 +6,9 @@ prepare() {
 	cp -fpR /etc/appkey/* /tmp/appkey/
 	appkey reload &> /dev/null
 
+	cp /etc/um/iplist.conf /tmp/iplist.conf
+	/etc/init.d/nginx_start.sh
+	
 	cp -f /etc/init.d/.smonitor.init /tmp/.smonitor.init
 }
 

@@ -20,4 +20,4 @@ if [ ! -f /tmp/urllist.conf ];then
 	cp /etc/um/urllist.conf /tmp/
 fi
 
-nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx 2>/dev/null;
+#nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx 2>/dev/null;

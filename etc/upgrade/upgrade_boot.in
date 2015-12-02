@@ -202,7 +202,7 @@ do_prepare_boot() {
 		local devpath=/dev/mmcblk0p1
 		local bootpath=/tmp/fastboot-burn.bin
 		
-		local bootfile=$(eval dd if=${devpath} of=${bootpath} bs=${size} count=1)
+		local bootfile=$(eval dd if=${devpath} of=${bootpath} bs=${size} count=1 2> /dev/null)
 
 		compare_md5sum ${file} ${bootpath}; ret=$?
 	fi
