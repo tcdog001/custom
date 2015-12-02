@@ -1,7 +1,5 @@
 #!/bin/bash
 
-sleep 3
-
 # add monitor to here
 smonitorc insert udhcpd "udhcpd -f /etc/udhcpd.conf"
 smonitorc insert php-fpm "php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/"

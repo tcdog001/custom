@@ -10,7 +10,9 @@ get_smonitor_pid() {
 
 	for ((i=0; i<count; i++)); do
 		tmp=$(ps | grep "${name}" | grep -v smonitor | grep -v grep | head -n 1 | awk '{print $1}')
-		expr ${tmp} + 1 &> /dev/null && pid=${tmp}
+		if [[ -n "${tmp}" ]]; then
+			expr ${tmp} + 1 &> /dev/null && pid=${tmp}
+		fi
 	done
 
 	echo ${pid}
