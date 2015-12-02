@@ -5,14 +5,16 @@
 main() {
 	local argc=$#
 	local name="$1"
+	local count="$2"; count=${count:=3}
+	local sleep="$3"; sleep=${sleep:=3}
 
-	if ((1!=argc)); then
+	if ((argc<1 || argc>3)); then
 		return 1
 	fi
 
-	sleep 3
+	sleep ${sleep}
 
-	smonitorc report "${name}" $(get_smonitor_pid "${name}")
+	smonitorc report "${name}" $(get_smonitor_pid "${name}" "${count}")
 }
 
 main "$@"

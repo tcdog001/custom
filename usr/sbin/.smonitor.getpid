@@ -5,11 +5,12 @@
 main() {
 	local argc=$#
 	local name="$1"
+	local count="$2"; count=${count:=3}
 
-	if ((1!=argc)); then
+	if ((argc<1)); then
 		echo 0
 	else
-		get_smonitor_pid "${name}"
+		get_smonitor_pid "${name}" "${count}"
 	fi
 }
 
