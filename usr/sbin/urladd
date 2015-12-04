@@ -20,7 +20,7 @@ main() {
 	local file=${file_url_conf_tmp}
 	local add_url="~*${url}		${stat};"
 
-	[[ -f ${file} ]] && eval sed '/$url/d' -i ${file}
+	[[ -f ${file} ]] && eval sed -i '/"\~\*$url "/d' ${file}
 	echo ${add_url} >> ${file}
 }
 

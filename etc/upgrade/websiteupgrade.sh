@@ -141,7 +141,7 @@ get_device_group() {
 	local group=""
 	local mac=""
 
-	mac=$(cat /data/.register.json 2>/dev/null | jq -j '.mac|strings')
+	mac=$(cat ${FILE_REGISTER} 2>/dev/null | jq -j '.mac|strings')
 	mac=$(echo ${mac} | tr -s [a-z] [A-Z])
 	
 	local file

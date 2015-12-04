@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. /etc/platform/bin/platform.in
 . /etc/utils/utils.in
 
 gps_upload() {

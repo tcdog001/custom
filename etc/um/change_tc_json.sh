@@ -31,14 +31,14 @@ def_locuprate=`awk '/lan_rate_up/{print $2}'  ${def_group}`
 
 #解析json字符串
 #echo "$filepath"
-intdownratemax=`echo ${json} | jq .wan.rate.down.max`
-intdownrateavg=`echo ${json} | jq .wan.rate.down.avg`
-intupratemax=`echo ${json} | jq .wan.rate.up.max`
-intuprateavg=`echo ${json} | jq .wan.rate.up.avg`
-locupratemax=`echo ${json} | jq .lan.rate.up.max`
-locuprateavg=`echo ${json} | jq .lan.rate.up.avg`
-locdownratemax=`echo ${json} | jq .lan.rate.down.max`
-locdownrateavg=`echo ${json} | jq .lan.rate.down.avg`
+intdownratemax=`echo ${json} | jq -j -c ".limit.wan.rate.down.max"`
+intdownrateavg=`echo ${json} | jq -j -c ".limit.wan.rate.down.avg"`
+intupratemax=`echo ${json} | jq -j -c ".limit.wan.rate.up.max"`
+intuprateavg=`echo ${json} | jq -j -c ".limit.wan.rate.up.avg"`
+locupratemax=`echo ${json} | jq -j -c ".limit.lan.rate.up.max"`
+locuprateavg=`echo ${json} | jq -j -c ".limit.lan.rate.up.avg"`
+locdownratemax=`echo ${json} | jq -j -c ".limit.lan.rate.down.max"`
+locdownrateavg=`echo ${json} | jq -j -c ".limit.lan.rate.down.avg"`
 
 #$intdownratemax=`echo ${intdownratemax} | sed 's/\"//g'`
 #$intdownrateavg=`echo ${intdownrateavg} | sed 's/\"//g'`

@@ -71,7 +71,7 @@ do_umc_command() {
        lan/rate/all/avg ${lan_rate_down} \
         wan/online/max ${wan_online} \
         wan/online/idle ${wan_idle} \
-        wan/flow/up/max ${wan_flow_up}x \
+        wan/flow/up/max ${wan_flow_up} \
         wan/flow/down/max ${wan_flow_down} \
         wan/flow/all/max ${wan_flow_all} \
         wan/rate/up/max ${wan_rate_up} \

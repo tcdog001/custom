@@ -6,7 +6,8 @@ else
 	__PLATFORM_BIN_PLATFORM_IN__="$0"
 fi
 
-readonly FILE_REGISTER=/data/.register.json
+. ${__ROOTFS__}/etc/utils/dir.in
+
 readonly FILE_CANCELLATION=/data/.cancellation.json
 readonly BACKUP_LOG=/mnt/flash/rootfs_data/backup/log/
 readonly CERTIFICATE=/etc/platform/conf/server.cer

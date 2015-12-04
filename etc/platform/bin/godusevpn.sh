@@ -42,10 +42,12 @@
 #552 请求的文件终止，储存位溢出。
 #553 未执行请求的的命令，名称不正确。
 
+. ${__ROOTFS__}/etc/utils/dir.in
+
 readonly file_recover_log=/tmp/.recover.log
 
 getmac() {
-	local mac=$(cat /data/.register.json | jq -j '.mac|strings' | tr "-" ":")
+	local mac=$(cat "${FILE_REGISTER}" | jq -j '.mac|strings' | tr "-" ":")
 		  mac=${mac:-00-00-00-00-00-00}
 
 	echo ${mac}

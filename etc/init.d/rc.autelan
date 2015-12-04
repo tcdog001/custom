@@ -1,9 +1,14 @@
 #!/bin/bash
 
-copy_appkey() {
-        mkdir -p /tmp/appkey /tmp/.backtrace
-        cp -fpR /etc/appkey/* /tmp/appkey/
-        appkey reload &> /dev/null
+prepare() {
+	mkdir -p /tmp/appkey /tmp/.backtrace
+
+	cp -fpR /etc/appkey/* /tmp/appkey/
+	appkey reload &> /dev/null
+
+	cp /etc/um/iplist.conf /tmp/iplist.conf
+	/etc/init.d/nginx_start.sh
+	
 }
 
 main() {
@@ -12,7 +17,7 @@ main() {
 	/etc/upgrade/mount_all.sh
 	. /etc/cp2.in
 
-	copy_appkey
+	prepare	
 
 	ifconfig lo up
 	#
@@ -63,21 +68,16 @@ main() {
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &
 	
-#	/usr/localweb/.compare_disk.sh &
+	/usr/localweb/.compare_disk.sh &
 
 #	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
 
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
 	/usr/sbin/auto_reboot_md.sh &
-	#
-	# try start cp's init
-	#
-	if [[ -n "${__CP_DEVMAC__}" ]]; then
-		/etc/init.d/${__CP__}/init.sh 2>/dev/null &
-	fi
 
         echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+	size_opt_dir > /dev/null
         
 	#
         # keep it last !!!

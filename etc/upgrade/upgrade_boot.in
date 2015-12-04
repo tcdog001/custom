@@ -1,0 +1,211 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+. ${__ROOTFS__}/etc/upgrade/upgrade.in
+
+aret=(0 1 2 3)
+RETOK=${aret[0]}
+RETNOK=${aret[1]}
+RETACC=${aret[2]}
+RETUPGRADE=${aret[3]}
+
+#
+# check the file fastboot-burn.bin
+#
+check_boot_file() {
+	local version="$1"
+
+	local file_path=${dir_md_rsync}/${version}/rootfs/image
+	local file=${file_path}/fastboot-burn.bin
+	local md5sum=""
+	local ret=${RETOK}
+
+	if [[ -f ${file} ]]; then
+		md5sum=$(get_file_md5sum "${file}"; ret=$?)
+   		[[ ${ret} -ne ${RETOK} ]] && ret=${RETNOK}
+	else
+   		ret=${RETNOK}
+   		upgrade_echo_logger "boot_upgrade" "bootfile=${file} not exist"
+	fi
+
+	echo ${md5sum}
+	return ${ret}
+}
+
+#
+# check the file .bversion
+#
+check_bversion_file() {
+	local version="$1"
+	
+	local file_path=${dir_md_rsync}/${version}/rootfs/etc
+	local file=${bversion_file_path}/.bversion
+	local bversion=""
+	local ret=${RETOK}
+	
+	bversion=$(cat ${file} 2>/dev/null; ret=$?)
+	if [[ ${ret} -ne ${RETOK} ]]; then
+		ret=${RETNOK}
+		upgrade_echo_logger "boot_upgrade" "bversion=${file} error"
+	fi
+	
+	echo ${bversion}
+	return ${ret}
+}
+
+#
+# get the size of fastboot-burn.bin
+#
+size_boot_file() {
+	local version="$1"
+	local file="$2"
+
+	local size=""
+	local ret=${RETOK}
+	
+	size=$(ls -la ${file} | awk '{print $5}'; ret=$?)
+	if [[ ${ret} -eq ${RETOK} ]]; then
+		ret=${RETOK}
+	else
+		ret=${RETNOK}
+	fi
+	
+	echo ${size}
+	return ${ret}
+}
+
+#
+# check the state of acc
+#
+check_acc_state() {
+	local ret=""
+	local acc_file=/data/acc_off.txt
+	
+	if [[ ! -f ${acc_file} ]]; then
+		ret=${RETOK}
+	else
+		ret=${RETACC}
+	fi
+	
+	return ${ret}
+}
+
+#
+# upgrade the boot, dd of=/dev/mmcblk0p1 if=
+#
+do_upgrade_boot() {
+	local version="$1"
+	local ret=${RETOK}
+	
+	if [[ -z ${version} ]]; then
+		ret=${RETNOK}
+		return ${ret}
+	fi
+	
+	local file_path=${dir_md_rsync}/${version}/rootfs/image
+	local file=fastboot-burn.bin
+	
+	upgrade_echo_logger "boot_upgrade" "upgrade start......"
+	
+	dd of=/dev/mmcblk0p1 if=${file_path}/${file}; ret=$?
+	if [[ ${ret} -eq ${RETOK} ]];then
+		upgrade_echo_logger "boot_upgrade" "dd ok"
+	else
+		upgrade_echo_logger "boot_upgrade" "dd error"
+		ret=${RETNOK}
+	fi
+	
+	return ${ret}
+}
+
+#
+# check the state of acc, and upgrade kernel version
+#
+upgrade_boot() {
+	local version="$1"
+	local ret=${RETOK}
+
+	check_acc_state; ret=$?
+	if [[ ${ret} -eq ${RETOK} ]];then
+		do_prepare_boot "${version}"; ret=$?
+		if [[ ${ret} -eq ${RETUPGRADE} ]]; then
+			upgrade_echo_logger "boot_upgrade" "need upgrade boot"
+			do_upgrade_boot "${version}"; ret=$?
+		else
+			ret=${RETOK}
+			upgrade_echo_logger "boot_upgrade" "need not upgrade boot"
+		fi
+	else
+		upgrade_echo_logger "boot_upgrade" "upgrade fail: ACC OFF"
+		ret=${RETACC}
+	fi
+
+	return ${ret}
+}
+
+#
+# get md5sum of the $1
+#
+get_file_md5sum(){
+	local file="$1"
+	local var=""
+
+	[[ -f ${file} ]] && var=$(md5sum ${file} 2> /dev/null | awk '{print $1}')
+	echo ${var}
+}
+
+#
+# Compare md5sum of $1 with $2.
+# When md5sum equals, do something.
+#
+compare_md5sum() {
+	local new_file="$1"
+	local mmc_file="$2"
+	local ret=${RETOK}
+	
+	[[ ! -s ${new_file} || ! -s ${mmc_file} ]] && {
+		ret=${RETNOK}
+		return ${ret}
+	}
+	
+	local md5_new=$(get_file_md5sum "${new_file}")
+	local md5_mmc=$(get_file_md5sum "${mmc_file}")
+	
+	if [[ -z ${md5_new} || -z ${md5_mmc} ]]; then
+		ret=${RETNOK}
+		return ${ret}
+	fi
+	
+	if [[ ${md5_new} != ${md5_mmc} ]];then
+		ret=${RETUPGRADE}
+	else
+		ret=${RETOK}
+	fi
+	
+	return ${ret}
+}
+
+#
+# get the file of partition /dev/mmcblk0p1, compare md5sum with fastboot-burn.bin
+#
+do_prepare_boot() {
+	local version="$1"
+
+	local file_path=${dir_md_rsync}/${version}/rootfs/image
+	local file=${file_path}/fastboot-burn.bin
+	local size=0
+	local ret=${RETOK}
+
+	size=$(size_boot_file "${version}" "${file}"; ret=$?)
+
+	if [[ ${ret} = ${RETOK} && ${size} -gt 200000 ]]; then
+		local devpath=/dev/mmcblk0p1
+		local bootpath=/tmp/fastboot-burn.bin
+		
+		local bootfile=$(eval dd if=${devpath} of=${bootpath} bs=${size} count=1 2> /dev/null)
+
+		compare_md5sum ${file} ${bootpath}; ret=$?
+	fi
+		
+	return ${ret}
+}
