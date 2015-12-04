@@ -4,7 +4,7 @@
 smonitorc insert normal udhcpd "udhcpd -f /etc/udhcpd.conf"
 
 # add deamon monitor to here
-smonitorc insert deamon /var/run/php-fpm.pid php-fpm "php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/"
-smonitorc insert deamon /var/run/dnsmasq.pid dnsmasq "/bin/dnsmasq"
-smonitorc insert deamon /var/run/sshd.pid sshd "/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22"
-smonitorc insert deamon /opt/log/nginx/logs/nginx.pid nginx "nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx"
+smonitorc insert deamon php-fpm /var/run/php-fpm.pid "php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/"
+smonitorc insert deamon dnsmasq /var/run/dnsmasq.pid "/bin/dnsmasq"
+smonitorc insert deamon sshd /var/run/sshd.pid "/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22"
+smonitorc insert deamon nginx /opt/log/nginx/logs/nginx.pid "nginx -c /usr/local/nginx/conf/nginx.conf -p /opt/log/nginx"
