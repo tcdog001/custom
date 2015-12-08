@@ -36,7 +36,7 @@ gen_reg_json_file() {
 	username ${username}${local_append} \	
 	uemac ${usermac} \
 	apmac ${apmac} \ 
-	apgroup ${apgroup}${local_append} \
+	apgroup ${apgroup}${local_append} \ 
 	apssid ${apssid}${local_append})
 	
 	echo "$json" > ${register_json}
