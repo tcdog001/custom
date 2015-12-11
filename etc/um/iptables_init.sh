@@ -1,8 +1,10 @@
 #!/bin/bash
 
+
 ipset -N white_list ipmap --network 192.168.0.0/16
+
 iptables -t nat -A PREROUTING  ! -d  192.168.0.1 -p tcp --dport 80 -i eth0.1  -m state --state NEW -m set --match-set white_list src -j REDIRECT --to-port 3126
-iptables -t nat -A PREROUTING  ! -d  192.168.0.1 -p tcp --dport 80 -i eth0.1  -m state --state NEW -j REDIRECT --to-port 80 
+iptables -t nat -A PREROUTING  ! -d  192.168.0.1 -p tcp --dport 80 -i eth0.1  -m state --state NEW -j REDIRECT --to-port 3127 
 
 iptables -P  FORWARD DROP
 
