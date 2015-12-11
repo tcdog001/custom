@@ -7,9 +7,9 @@ local_append="_"
 umsc_log="/tmp/umsc.log"
 ums_addr="https://120.26.47.127:8282"
 
-register_url="UMS/UserRegister.do"
-auth_url="UMS/UserAuth.do"
-update_url="UMS/UpdateLog.do"
+register_url="/UMS/UserRegister.do"
+auth_url="/UMS/UserAuth.do"
+update_url="/UMS/UpdateLog.do"
 deauth_url="/UMS/UserDeauth.do"
 macauth_url="/UMS/MacFreeAuth.do"
 
@@ -26,7 +26,7 @@ get_ap_ssid() {
 get_ap_mac() {
 	echo "22:22:22:22:22:22"
 }
-gen_reg_json_file() {
+gen_reg_json() {
 	local username="$1"	
 	local apmac="$2"
 	local apssid="$3" 
@@ -40,7 +40,7 @@ gen_reg_json_file() {
 	apssid ${apssid}${local_append})
 	
 	echo "$json" > ${register_json}
-	echo "0"
+	echo "${json}"
 	return 0
 }
 gen_auth_json_file() {
@@ -56,23 +56,23 @@ gen_auth_json_file() {
 	local aplng="$9"
 	local usertype="phone"
 	local json
-	json=$(json_create \
-		usertype ${usertype} \		
-		username ${username}${local_append} \
-		validatecode ${passwd}${local_append} \
-		associattime ${associattime} \
-		logintime "" \
-		ueip ${ueip} \
-		uemac ${uemac} \
-		useragent "" \
-		apmac ${apmac} \
-		apssid ${apssid}${local_append} \
-		aplat ${aplat} \
-		aplng ${aplng})		
+	json=$(json_create 
+	usertype "${usertype}" \
+	username "${username}${local_append}" \ 
+	validatecode "${passwd}${local_append}" \
+	associattime "${associattime}" \
+	logintime "1970-01-01T08:00:13Z" \
+	ueip "${ueip}" \
+	uemac "${uemac}" \
+	useragent "11ss" \
+	apmac "${apmac}" \
+	apssid "${apssid}${local_append}" \
+	aplat "${aplat}" \
+	aplng "${aplng}")		
 
 	echo ${json} > ${auth_json}
 
-	echo "0"
+	echo "${json}"
 	return 0
 }
 
@@ -203,17 +203,12 @@ register() {
 	fi
 	
 
-	gen_reg_json_file ${username} ${apMac} ${apSsid}  
-	if (($? != 0)); then
-		echo "Generate ${register_json} failed!" >> ${umsc_log}
-		echo "1"
-		return 1
-	fi
+	local json=$(gen_reg_json ${username} ${apMac} ${apSsid})  
 
 	local result=$(curl -k -cert /tmp/server.cer \
 		-H "Content-type: application/json" \
 		-X POST  \
-		-d @"${register_json}" \
+		-d "${json}" \
 		"${ums_addr}""${register_url}" \
 		"-s")
 
@@ -279,16 +274,12 @@ auth() {
 		echo "1"
 		return 
 	fi
-	nouse=$(gen_auth_json_file $@)
-	if(($? != 0)); then
-		echo "Generate ${auth_json} failed" >> ${umsc_log}
-		echo "1"
-		return 1
-	fi
+	local json=$(gen_auth_json_file $@)
+
 	local result=$(curl -k -cert /tmp/server.cer \
 		-H "Content-type: application/json" \
 		-X POST  \
-		-d @"${auth_json}" \
+		-d "${json}" \
 		"${ums_addr}""${auth_url}" \
 		"-s")
 

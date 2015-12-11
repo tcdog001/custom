@@ -92,9 +92,10 @@ um_unbind() {
 	local mac=`echo ${json} | jq -j -c ".mac"`
 	local ip=`echo ${json} | jq -j -c ".ip"`
 
-	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	#local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+
 	/sbin/ipset -D white_list ${ip}
 	/etc/um/change_tc.sh ${ip} 0
 }
@@ -116,9 +117,9 @@ um_auth() {
 		echo "Error:there is no ${iplist_flile}"
 		return 1
 	fi
-	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	#local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 	/sbin/ipset -A white_list ${ip}
 	if ((group >= 0)); then
 		/etc/um/change_tc.sh ${ip} ${group}
@@ -158,9 +159,9 @@ um_deauth() {
 		return 1
 	fi
 	
-	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	#local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 
 	/sbin/ipset -D white_list ${ip}
 
