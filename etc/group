@@ -1,5 +1,2 @@
 root::0:ttttt
-messagebus:x:1000:
-lp:x:1001:
 nobody:x:1002:
-ttttt:x:1003:

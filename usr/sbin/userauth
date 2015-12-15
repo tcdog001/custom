@@ -1,6 +1,5 @@
 #!/bin/bash
 
-## for zjhn
 . /etc/utils/utils.in
 
 get_group() {
@@ -101,18 +100,7 @@ uauth_ver2() {
 
 uauth_ver3() {
 	#userauth 3 mac json
-	local argc=$#
-	local mac=$2
-	local json=$3
-	local group=-1
-	
-	if((3!=argc)); then
-		return 1
-	fi
-
-        umc auth "${mac}" "${group}" "${json}"
-
-	return 0 
+	return 
 }
 
 uauth_ver1() {

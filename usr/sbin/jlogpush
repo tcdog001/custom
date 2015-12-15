@@ -1,0 +1,13 @@
+#!/bin/bash
+
+main() {
+	local json="$*"
+
+	#
+	# todo: use curl
+	#
+	#
+	/etc/platform/bin/curljlog.sh "${json}"
+}
+
+main "$@"

@@ -1,0 +1,398 @@
+#!/bin/bash
+
+. /etc/utils/utils.in
+
+local_append="_"
+
+umsc_log="/tmp/umsc.log"
+ums_addr="https://120.26.47.127:8282"
+
+register_url="/UMS/UserRegister.do"
+auth_url="/UMS/UserAuth.do"
+update_url="/UMS/UpdateLog.do"
+deauth_url="/UMS/UserDeauth.do"
+macauth_url="/UMS/MacFreeAuth.do"
+
+register_json="/tmp/um/register.json"
+auth_json="/tmp/um/auth.json"
+update_json="/tmp/um/update.json"
+deauth_json="/tmp/um/deauth.json"
+macauth_json="/tmp/um/macauth.json"
+
+get_ap_ssid() {
+	local usermac=$2
+	echo "ishanghai.com"
+}
+get_ap_mac() {
+	echo "22:22:22:22:22:22"
+}
+gen_reg_json() {
+	local username="$1"	
+	local apmac="$2"
+	local apssid="$3" 
+	local apgroup="1"
+	local json	
+	json=$(json_create \
+	username ${username}${local_append} \	
+	uemac ${usermac} \
+	apmac ${apmac} \ 
+	apgroup ${apgroup}${local_append} \ 
+	apssid ${apssid}${local_append})
+	
+	echo "$json" > ${register_json}
+	echo "${json}"
+	return 0
+}
+gen_auth_json_file() {
+	#USERNAME PASSWORD ASSOCIATETIME USERIP USERMAC DEVMAC APSSID APLAT APLNG
+	local username="$1"
+	local passwd="$2"
+	local associatetime="$3"
+	local ueip="$4"
+	local uemac="$5"
+	local apmac="$6"
+	local apssid="$7"
+	local aplat="$8" 
+	local aplng="$9"
+	local usertype="phone"
+	local json
+	json=$(json_create 
+	usertype "${usertype}" \
+	username "${username}${local_append}" \ 
+	validatecode "${passwd}${local_append}" \
+	associattime "${associattime}" \
+	logintime "1970-01-01T08:00:13Z" \
+	ueip "${ueip}" \
+	uemac "${uemac}" \
+	useragent "11ss" \
+	apmac "${apmac}" \
+	apssid "${apssid}${local_append}" \
+	aplat "${aplat}" \
+	aplng "${aplng}")		
+
+	echo ${json} > ${auth_json}
+
+	echo "${json}"
+	return 0
+}
+
+gen_update_json_file() {
+	local usermac="$1"
+	local flowup="$2"
+	local flowdown="$3"
+	local json
+	json=$(json_create \
+		usermac ${usermac} \
+		flowup ${flowup} \
+		flowdown ${flowdown})
+	echo ${json} > ${update_json}
+
+	echo "0"
+	return 0
+}
+
+gen_deauth_json_file() {
+	local associattime=$1
+	local uemac=$2
+	local apmac=$3
+	local apgroup=$4
+	local apssid=$5
+	local aplat=$6
+	local aplng=$7
+
+	local json
+
+	json=$(json_create \
+	        associattime ${associattime} \
+	        uemac ${uemac} \
+		apmac ${apmac} \
+		apgroup ${apgroup} \
+		apssid ${apssid} \
+		aplat ${aplat} \
+		aplng ${aplng})
+
+	echo ${json} > ${macauth_json}
+
+	return 0
+}
+gen_macauth_json_file() {
+	local username="$1"	
+	local apmac="$2"
+	local apssid="$3" 
+	local apgroup="1"
+	local json	
+	json=$(json_create \
+	username ${username}${local_append} \	
+	uemac ${usermac} \
+	apmac ${apmac} \ 
+	apgroup ${apgroup}${local_append} \
+	apssid ${apssid}${local_append})
+	
+	echo "$json" > ${register_json}
+	echo "0"
+	return 0
+}
+exec_policy() {
+	local para=$1	
+	local usermac=$2
+	
+	local userpolicyselect=$(echo ${para} | jq -j -c ".userpolicyselect")
+	if[ "${userpolicyselect}"=="group" ]; then
+		local usergroup=$(echo ${para} | jq -j -c ".usergroup")
+		##??
+		echo 0
+		return 0
+	fi
+	local lan_rate_down_max=$(echo ${para} | jq -j -c ".lanrxratemax")
+	local lan_rate_down_avg=$(echo ${para} | jq -j -c ".lanrxrateavg")
+	local lan_rate_up_max=$(echo ${para} | jq -j -c ".lantxratemax")
+	local lan_rate_up_avg=$(echo ${para} | jq -j -c ".lantxrateavg")
+	local wan_rate_down_max=$(echo ${para} | jq -j -c ".wanrxratemax")
+	local wan_rate_down_avg=$(echo ${para} | jq -j -c ".wanrxrateavg")
+	local wan_rate_up_max=$(echo ${para} | jq -j -c ".wantxratemax")
+	local wan_rate_up_avg=$(echo ${para} | jq -j -c ".wantxrateavg")
+	local lan_idle=$(echo ${para} | jq -j -c ".lanidletimeout")
+	local wan_idle=$(echo ${para} | jq -j -c ".wanidletimeout")
+	#local wan_online_time=$(echo ${para} | jq -j -c ".sessiontimeout")
+	#local wan_flow_all=$(echo ${para} | jq -j -c ".sessiontrafficout")
+	local wan_online_time=$(echo ${para} | jq -j -c ".sessiontimeoutallowance")
+	local wan_flow_all=$(echo ${para} | jq -j -c ".sessiontrafficoutallowance")
+
+       local json=$(json_create \
+       lan/online/max 0 \
+       lan/online/idle ${lan_idle} \
+       lan/flow/up/max 0 \
+       lan/flow/down/max 0 \
+       lan/flow/all/max 0 \
+       lan/rate/up/max ${lan_rate_up_max} \
+       lan/rate/up/avg ${lan_rate_up_avg} \
+       lan/rate/down/max ${lan_rate_down_max} \
+       lan/rate/down/avg ${lan_rate_down_avg} \
+       lan/rate/all/max 0 \
+       lan/rate/all/avg 0 \
+        wan/online/max ${wan_online_time} \
+        wan/online/idle ${wan_idle} \
+        wan/flow/up/max 0 \
+        wan/flow/down/max 0 \
+        wan/flow/all/max ${wan_flow_all} \
+        wan/rate/up/max ${wan_rate_up_max} \
+        wan/rate/up/avg ${wan_rate_up_avg} \
+        wan/rate/down/max ${wan_rate_down_max} \
+        wan/rate/down/avg ${wan_rate_down_avg} \
+        wan/rate/all/max 0 \
+        wan/rate/all/avg 0)
+ 	json=$(echo ${json} | jq -j -c .)
+ 	#echo "${json}" >> ${umsc_log}
+
+ 	userauth 3 ${usermac} ${json} 
+ 	echo "0"
+	return 0
+}
+
+register() {
+
+	local use="register Param: USERNAME USERMAC"
+	local username=$1
+	local apMac=$2
+	local apSsid=$3
+
+	if (($# == 0)); then
+		echo "${use}"  >> ${umsc_log}
+		echo "1"
+		return  1
+	fi
+	
+
+	local json=$(gen_reg_json ${username} ${apMac} ${apSsid})  
+
+	local result=$(curl -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		-X POST  \
+		-d "${json}" \
+		"${ums_addr}""${register_url}" \
+		"-s")
+
+	echo "`date` Register ($@)" >> ${umsc_log}
+	echo "`date` result=${result}" >> ${umsc_log}
+
+	result_code=$(echo "${result}" | jq -j ".code")
+	return ${result_code} 
+}
+
+mac_free_auth() {
+	local associattime=$1
+	local uemac=$2
+	local apmac=$3
+	local apgroup=$4
+	local apssid=$5
+	local aplat=$6
+	local aplng=$7
+
+	gen_macauth_json_file $@		
+
+	local result=$(curl  -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		 -X POST  \
+		-d @"${macauth_json}" \
+		"${ums_addr}""${macauth_url}" \
+		-s)	
+	
+	echo "`date` ${uemac} macauth received=${result}" >> ${umsc_log}
+
+	local result_code=$(echo "${result}" | jq -j ".code")
+	case "${result_code}" in
+		0 )
+			echo "Auth success!($macauth)"  >> umsc_log
+			result=$(echo "${result}" | jq -j -c .)
+			nouse=$(exec_policy ${result} ${uemac})
+			echo "0" 
+			;;
+		
+		* )
+			echo "auth return code: ${result_code}" >> ${umsc_log}
+			echo ${result_code}  
+			;;
+	esac
+
+	return 0
+}
+auth() {
+
+	local use="umsc_auth Param: USERNAME PASSWORD ASSOCIATETIME USERIP USERMAC DEVMAC APSSID APLAT APLNG"
+	local username=$1
+	local usermac=$2
+	local asstime=$3
+	local userip=$4
+	local usermac=$5
+	local apmac=$6
+	local apssid=$7
+	local aplat=$8
+	local aplng=$9
+
+	if(($# != 9)); then
+		echo "${use}" >> ${umsc_log}
+		echo "1"
+		return 
+	fi
+	local json=$(gen_auth_json_file $@)
+
+	local result=$(curl -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		-X POST  \
+		-d "${json}" \
+		"${ums_addr}""${auth_url}" \
+		"-s")
+
+	echo "`date` ${username} auth received=${result}" >> ${umsc_log}
+
+	local result_code=$(echo "${result}" | jq -j ".code")
+	case "${result_code}" in
+		0 )
+			echo "Auth success!($1)"  >> umsc_log
+			result=$(echo "${result}" | jq -j -c .)
+			nouse=$(exec_policy ${result} ${usermac})
+			echo "0" 
+			;;
+		
+		* )
+			echo "auth return code: ${result_code}" >> ${umsc_log}
+			echo ${result_code}  
+			;;
+	esac
+	return 0
+}
+
+umsc_update() {
+
+	local use="umsc_update Param: USERMAC FLOWUP FLOWDOWN"
+	local usermac=$1
+	if(($# != 3)); then
+		echo "${use}" >> ${umsc_log}
+		echo "1"
+		return 
+	fi
+	noreturn=$(gen_update_json_file $@)
+	if(($? != 0)); then
+		echo "Generate ${update_json} failed" >> ${umsc_log}
+		return 1
+	fi
+	local result=$(curl -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		-X POST  \
+		-d @"${update_json}" \
+		"${ums_addr}""${update_url}" \
+		"-s")
+	echo "`date` update result=${result}" >> ${umsc_log}
+
+	local result_code=$(echo "${result}" | jq -j ".code")
+
+	case "${result_code}" in
+		0 )
+			echo "Update success!($1)"  >> ${umsc_log}
+			echo "0"
+			;;
+		7 )
+			echo "Update ask for deauth($1)" >> ${umsc_log}
+			noreturn=$(umc deauth ${usermac})
+			echo "0"
+			;;
+		* )
+			echo "Update error: ${result_code}" >> ${umsc_log}
+			echo "${result_code}"
+			;;
+	esac
+	return 0
+}
+
+umsc_deauth() {
+
+	local use="umsc_deauth Param: USERMAC REASON"
+	local usermac=$1
+	if(($# != 2)); then
+		echo "${use}" >> ${umsc_log}
+		return 1
+	fi
+	noreturn=$(gen_deauth_json_file $@)
+	if(($? != 0)); then
+		echo "Generate ${deauth_json} failed" >> ${umsc_log}
+		return 1
+	fi
+	local result=$(curl -k -cert /tmp/server.cer \
+		-H "Content-type: application/json" \
+		-X POST  \
+		-d @"${deauth_json}" \
+		"${ums_addr}""${deauth_url}" \
+		"-s")
+	echo "`date` result=${result}" >> ${umsc_log}
+
+	local result_code=$(echo "${result}" | jq -j ".code")
+
+	case "${result_code}" in
+		0 )
+			echo "Deauth success!($1)"  >> ${umsc_log}
+			echo "0"
+			;;
+		* )
+			echo "Deauth error: ${result_code}" >> ${umsc_log}
+			echo "${result_code}"
+			;;
+	esac
+	return 0
+}
+
+nomain(){
+	local action="$1"; shift
+	local result
+	echo "$action $@"
+
+	case ${action} in 
+		register|auth|update|deauth)
+			result=$(umsc_${action} "$@")
+			echo ${result}
+			return ${result}
+			;;
+		*)
+			return 1
+			;;
+	esac
+}

@@ -1,0 +1,17 @@
+#!/bin/bash
+. /etc/utils/dir.in
+
+main() {
+	local file="$1"
+	local count="$2"
+	local time=$(date '+%F-%H:%M:%S')
+	#
+	# todo: cut the file
+	#
+	
+	cp ${file} ${dir_tmp_log_aute}/aute_jlog-${time}
+	
+	/etc/platform/bin/diagnose_log.sh &
+}
+
+main "$@"

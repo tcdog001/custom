@@ -70,12 +70,13 @@
 ## User privilege specification
 ##
 root ALL=(ALL) ALL
-autelan ALL=(root) NOPASSWD: ALL
+
 ## Uncomment to allow members of group wheel to execute any command
 # %wheel ALL=(ALL) ALL
 
 ## Same thing without a password
-nobody  ALL=(ALL) NOPASSWD:/usr/sbin/userauth,/data/app/etc/um/usr_certificate.sh,/sbin/iptables,/sbin/arp
+nobody  ALL=(ALL) NOPASSWD:/usr/sbin/userauth,/data/app/etc/um/usr_certificate.sh,/sbin/iptables,/sbin/arp,/bin/sh,/bin/curl,/usr/bin/wget
+
 ## Uncomment to allow members of group sudo to execute any command
 # %sudo	ALL=(ALL) ALL
 

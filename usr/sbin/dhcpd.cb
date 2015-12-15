@@ -1,0 +1,20 @@
+#!/bin/bash
+
+main() {
+	local act="$1"
+	local mac="$2"
+	local ip="$3"
+
+	case ${act} in
+	decline|nak)
+		umc unbind ${mac}
+		;;
+	ack)
+		umc bind ${mac} ${ip}
+		;;
+	*)
+		;;
+	esac
+}
+
+main "$@"

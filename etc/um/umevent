@@ -4,10 +4,6 @@ iplist_file="/tmp/iplist.conf"
 
 do_limit() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local group="$3"; shift 3
-	local json="$*"
 
 	if ((argc<3)); then
 		return 1
@@ -48,8 +44,8 @@ um_fini() {
 
 do_xbind() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	#local mac="$1"
+	#local ip="$2"
 
 	if ((2!=argc)); then
 		return 1
@@ -59,8 +55,8 @@ do_xbind() {
 
 um_bind() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	#local mac="$1"
+	#local ip="$2"
 
 	echo 1. begin bind 
 	#echo 2. set ip to nginx
@@ -78,8 +74,7 @@ um_unbind() {
 	do_xbind "$@"
 
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
+	local json=$1
 
 	if ((2!=argc)); then
 		return 1
@@ -93,9 +88,14 @@ um_unbind() {
 		echo "Error:there is no ${iplist_file}"
 		return 1
 	fi
-	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+
+	#local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+
 	/sbin/ipset -D white_list ${ip}
 	/etc/um/change_tc.sh ${ip} 0
 }
@@ -106,23 +106,20 @@ um_auth() {
 	echo 2. set ip to nginx
 	echo 3. set ip to ipset 
 
-	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local group="$3"; shift 3
-	local json="$*"
+	local json="$1"
 
-	if ((argc<3)); then
-		return 1
-	fi
+
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+	local group=`echo ${json} | jq -j -c ".group"`
 
 	if [ ! -f ${iplist_file} ]; then	
 		echo "Error:there is no ${iplist_flile}"
 		return 1
 	fi
-	local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	#local flag=`awk -F"  *|;" '/'"$ip "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 1/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 	/sbin/ipset -A white_list ${ip}
 	if ((group >= 0)); then
 		/etc/um/change_tc.sh ${ip} ${group}
@@ -140,22 +137,19 @@ do_offline() {
 	# todo: update user offline reason
 	#
 }
-
 um_deauth() {
 	local argc=$#
-	local mac="$1"
-	local ip="$2"
-	local reason="$3"
-
-	if ((3!=argc)); then
-		return 1
-	fi
+	local json=$1
 
 	echo 1. begin deauth 
 	echo 2  deauth from ums
 	echo 3. remove ip from nginx
 	echo 4. remove ip from ipset 
 
+	
+	local mac=`echo ${json} | jq -j -c ".mac"`
+	local ip=`echo ${json} | jq -j -c ".ip"`
+	local reason=`echo ${json} | jq -j -c ".reason"`
 
 	do_limit "${mac}" "${ip}" 0
 	do_offline "${ip}" "${reason}"
@@ -165,14 +159,9 @@ um_deauth() {
 		return 1
 	fi
 	
-	local result=$(umsc.sh deauth ${mac})
-	if ((result != 0)); then 
-		return 1 
-	fi
-
-	local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
-	sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
-	nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
+	#local flag=`awk -F"  *|;" '/'"${ip} "'/{print $2}'  ${iplist_file}`				
+	#sed -i "s/${ip} [ ]*${flag}/${ip} 0/g" ${iplist_file} 
+	#nginx -s reload   -c /usr/local/nginx/conf/nginx.conf
 
 	/sbin/ipset -D white_list ${ip}
 

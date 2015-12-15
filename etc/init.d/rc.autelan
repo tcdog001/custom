@@ -6,9 +6,11 @@ prepare() {
 	cp -fpR /etc/appkey/* /tmp/appkey/
 	appkey reload &> /dev/null
 
+	cp -Rpf /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf
 	cp /etc/um/iplist.conf /tmp/iplist.conf
 	/etc/init.d/nginx_start.sh
 	
+	cp -f /etc/init.d/.smonitor.init /tmp/.smonitor.init
 }
 
 main() {
@@ -40,13 +42,14 @@ main() {
 
 	route add default gw 1.0.0.1
 
-	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
-	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
-	# move nginx_start.sh to file umevent in function um_init
-	#/etc/init.d/nginx_start.sh &
-	/etc/init.d/python_start.sh &
-	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
+# remove to .smonitor.init
+#	udhcpd -f /etc/udhcpd.conf & 2>/dev/null
+# remove to .smonitor.init
+#	php-fpm -y /usr/local/php/php-fpm.ini -p /usr/local/php/ 2>/dev/null
+# remove to .smonitor.init
+#	/usr/sbin/sshd -f /etc/ssh/ssh_config -h /etc/ssh/ssh_host_rsa_key -p 22
 
+	/etc/init.d/python_start.sh &
 	sysctl -p 2>/dev/null
 
 	/bin/chmod -R 777 /usr/local/php/php-cgi.sock
@@ -54,13 +57,10 @@ main() {
 	/bin/chmod u+s /sbin/sudo
 	/bin/chmod -R 777 /mnt/hd/website/
 	/bin/chmod -R 777 /sbin/arp
-
 	/bin/chmod 600 /etc/rsyncd.pass
-	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
-	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
-	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
-	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
-	/bin/dnsmasq & 2>/dev/null
+
+# remove to .smonitor.init
+#	/bin/dnsmasq & 2>/dev/null
 	
 	#/usr/sbin/crond -c /etc/crontabs/
 	/etc/platform/bin/godusevpn.sh &
@@ -70,21 +70,19 @@ main() {
 	
 	/usr/localweb/.compare_disk.sh &
 
-#	wifidog -c /usr/local/etc/wifidog.conf 2>/dev/null
-
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &
 	/usr/sbin/auto_reboot_md.sh &
 
-        echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+	echo $(date '+%F-%H-%M-%S') > /tmp/.startup
+
 	size_opt_dir > /dev/null
+	/etc/upgrade/upgrade_boot.sh "$(sysversion)" "600" & > /dev/null
         
 	#
-        # keep it last !!!
-        #
-        /etc/upgrade/rootfs_init.sh &
-        
-	#/etc/init.d/ngrok.sh &
+	# keep it last !!!
+	#
+	/etc/upgrade/rootfs_init.sh &
 }
 
 main "$@"
