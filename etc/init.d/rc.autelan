@@ -6,6 +6,11 @@ prepare() {
 	cp -fpR /etc/appkey/* /tmp/appkey/
 	appkey reload &> /dev/null
 
+	# for default nameserver
+	cp -Rpf /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf
+	cp -Rpf /etc/resolv.conf.3gdown /etc/resolv.conf
+	cp -Rpf /usr/local/nginx/conf/nginx.conf.3gdown /usr/local/nginx/conf/nginx.conf
+	
 	cp /etc/um/iplist.conf /tmp/iplist.conf
 	/etc/init.d/nginx_start.sh
 	
@@ -55,12 +60,8 @@ main() {
 	/bin/chmod u+s /sbin/sudo
 	/bin/chmod -R 777 /mnt/hd/website/
 	/bin/chmod -R 777 /sbin/arp
-
 	/bin/chmod 600 /etc/rsyncd.pass
-	/bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
-	/bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
-	/bin/chmod 777 /etc/dnamasq.conf.3gup 2>/dev/null
-	/bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
+
 # remove to .smonitor.init
 #	/bin/dnsmasq & 2>/dev/null
 	

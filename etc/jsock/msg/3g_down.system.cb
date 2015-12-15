@@ -18,14 +18,14 @@ main() {
     echo ${LINK_DOWN} > ${file_status_3g}
 
     jmsg_logger "recive message:${self%%.*}, body:${body}"
-#    echo "recive message:${self%%.*}, body:${body}" >> /tmp/mytest.log
-#   mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null
-    /bin/cp /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
-    /bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
-#   /bin/chmod 777 /etc/dnsmasq.conf.bak 2>/dev/null
-    /bin/chmod 777 /etc/dnsmasq.conf.3gdown 2>/dev/null
-    /usr/bin/killall dnsmasq 2>/dev/null
-    /bin/dnsmasq & 2>/dev/null
+
+    cp -Rpf /etc/dnsmasq.conf.3gdown /etc/dnsmasq.conf 2>/dev/null
+    killall dnsmasq 2>/dev/null
+    
+    # for default nameserver
+    cp -Rpf /etc/resolv.conf.3gdown /etc/resolv.conf 2>/dev/null
+    cp -Rpf /usr/local/nginx/conf/nginx.conf.3gdown /usr/local/nginx/conf/nginx.conf
+    nginx_reload
 }
 
 main "$@"

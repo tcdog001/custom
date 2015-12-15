@@ -18,15 +18,19 @@ main() {
     echo ${LINK_UP} > ${file_status_3g}
 
     jmsg_logger "recive message:${self%%.*}, body:${body}"
-#    echo "recive message:${self%%.*}, body:${body}" >> /tmp/mytest.log
-    /bin/cp /etc/dnsmasq.conf.3gup /etc/dnsmasq.conf 2>/dev/null
-    /bin/chmod 777 /etc/dnsmasq.conf 2>/dev/null
-    /bin/chmod 777 /etc/dnsmasq.conf.3gup 2>/dev/null
-    /usr/bin/killall dnsmasq 2>/dev/null
-    /bin/dnsmasq & 2>/dev/null
 
-	ntpclient -h cn.pool.ntp.org -s -c 1 && \
-		ntpclient -h cn.pool.ntp.org -s -c 1 &
+    cp -Rpf /etc/dnsmasq.conf.3gup /etc/dnsmasq.conf 2>/dev/null
+    killall dnsmasq 2>/dev/null
+
+    # for zjhn nameserver
+    if [[ "$(peercmd cat /tmp/3g_model)" = "MC271X" ]]; then
+	cp -Rpf /etc/resolv.conf.3gup /etc/resolv.conf 2>/dev/null
+	cp -Rpf /usr/local/nginx/conf/nginx.conf.3gup /usr/local/nginx/conf/nginx.conf
+	nginx_reload
+    fi
+
+    ntpclient -h cn.pool.ntp.org -s -c 1 && \
+	ntpclient -h cn.pool.ntp.org -s -c 1 &
 
     ${__ROOTFS__}/etc/upgrade/rsync_task.sh &
 }

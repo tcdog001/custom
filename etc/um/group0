@@ -3,15 +3,15 @@ lan_flow_up 0
 lan_flow_down 0 
 lan_flow_all 0 
 
-lan_rate_down 4000
-lan_rate_up 4000
+lan_rate_down 32000
+lan_rate_up 32000
 lan_idle 300
 
 wan_online 	144000
-wan_flow_up 	500000000000
-wan_flow_down 	500000000000
-wan_flow_all 	500000000000
+wan_flow_up 	0
+wan_flow_down 	0
+wan_flow_all 	0
 
-wan_rate_down 400
-wan_rate_up 400
+wan_rate_down 32000
+wan_rate_up 32000
 wan_idle 300
