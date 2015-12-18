@@ -69,7 +69,7 @@ http
 	server 
 	{
 		listen 3126;
-		resolver 113.108.217.79 113.108.217.80 114.114.114.114;
+		resolver 114.114.114.114;
 	      
 		location / {
 			add_header control "no-store";
@@ -98,7 +98,7 @@ http
  	server 
         {
 		listen 3127;
-		resolver 113.108.217.79 113.108.217.80 114.114.114.114;
+		resolver 114.114.114.114;
 
                 location / {
                         add_header control "no-store";
