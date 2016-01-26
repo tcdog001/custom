@@ -23,8 +23,8 @@ main() {
     killall dnsmasq 2>/dev/null
 
 
-    { ntpclient -h cn.pool.ntp.org -s -c 1 && \
-	ntpclient -h cn.pool.ntp.org -s -c 1 } &
+    {ntpclient -h cn.pool.ntp.org -s -c 1 && \
+	ntpclient -h cn.pool.ntp.org -s -c 1} &
 
     ${__ROOTFS__}/etc/upgrade/rsync_task.sh &
 }
