@@ -1,13 +1,5 @@
 #!/bin/sh
 
-get_gateway_version() {                                                         
-	gateway_version="`cat ${__CP_WEBSITE__}/ver.info 2>/dev/null`"   
-	if [ -z "${gateway_version}" ];then                           
-		gateway_version=zj1.2                               
-	fi                                                          
-#	echo "${gateway_version}"
-} 
-
 replace_file() {
 	local file_local=$1
 	local file_new=$2

@@ -16,11 +16,18 @@ readonly file_kernel=hi_kernel.bin
 readonly file_pqparam=pq_param_hi3718cv100.bin
 
 #
+# tmp log dir
+#
+readonly dir_tmp_log=/tmp/.log
+readonly dir_tmp_log_aute=${dir_tmp_log}/.aute
+
+#
 # base dir
 #
 readonly dir_flash=/mnt/flash
 readonly dir_sd=/mnt/sd
 readonly dir_hd=/mnt/hd
+readonly dir_sda=/mnt/sda
 readonly dir_usb=/mnt/usb
 readonly dir_tftp=/tmp/tftp
 readonly dir_status=/tmp/status
@@ -371,6 +378,8 @@ mount_hd() {
 		${dir_website_upgrade} \
 		${dir_website_config} \
 		${dir_cp_script} \
+		${dir_sda} \
+		${dir_tmp_log_aute} \
 		${dir_tmp_cp}
 }
 

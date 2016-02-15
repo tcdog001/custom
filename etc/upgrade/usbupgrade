@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. ${__ROOTFS__}/etc/upgrade/dir.in
+
 main() {
 	local dir_base=/mnt/usb/upgrade
 	#
@@ -7,9 +9,27 @@ main() {
 	#
 	local file=${dir_base}/.usbupgrade_auto
 	touch ${file}; fsync ${file}
+	
+	if [ "${__UPGRADE_AP__}" = "no" ]; then
+		__UPGRADE_AP__=no
+	else
+		__UPGRADE_AP__=yes
+	fi
 
-	local dir_rootfs=${dir_base}/rootfs
-	__ROOTFS__=${dir_rootfs} ${dir_rootfs}/etc/upgrade/usbupgrade.sh
+	local current=$(rootfs_current)
+	local state=$(bootm rootfs${current})
+	if [[ ${current} -eq 0 || ${state} != "o" ]]; then
+		for ((;;)); do
+			echo "wait ..."
+			sleep 10
+		done
+	fi
+	
+	#
+	# do the usbupgrade
+	#
+	local dir_rootfs_usb=${dir_base}/rootfs
+	__UPGRADE_AP__=${__UPGRADE_AP__} __ROOTFS__=${dir_rootfs_usb} ${dir_rootfs_usb}/etc/upgrade/usbupgrade.sh
 }
 
 main

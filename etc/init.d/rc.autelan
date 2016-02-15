@@ -68,7 +68,7 @@ main() {
 	. /etc/drop_off.sh
 	. /etc/get_time.sh &
 	
-	/usr/localweb/.compare_disk.sh &
+#	/usr/localweb/.compare_disk.sh &
 
 	/etc/jsock/jsock_init.sh
 	/usr/sbin/sync_3gstatus_MD.sh &

@@ -3,7 +3,8 @@
 get_gateway_version() {                                                         
 	gateway_version="`cat ${__CP_WEBSITE__}/ver.info 2>/dev/null`"   
 	if [ -z "${gateway_version}" ];then                           
-		gateway_version=zj1.2                               
+		gateway_version=""
+		#gateway_version=zj1.2                               
 	fi                                                          
 #	echo "${gateway_version}"
 } 

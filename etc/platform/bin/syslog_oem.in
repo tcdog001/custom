@@ -167,7 +167,7 @@ get_pv_http_log() {
         if [ -f /tmp/udhcp.lease ]; then
            dumpleases -f /tmp/udhcp.lease > /tmp/maciplist.log
            while read mac ip device time; do
-              sed -i "s/${ip}/${ip}+${mac}/g" ${logs[pv_http.log]}
+              sed -i "s/remote_addr\":\"${ip}\"/remote_mac\":\"${mac}\",\"remote_addr\":\"${ip}\"/g" ${logs[pv_http.log]}
            done < /tmp/maciplist.log
            rm /tmp/maciplist.log
         fi

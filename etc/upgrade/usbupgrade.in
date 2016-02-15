@@ -12,6 +12,7 @@ fi
 readonly file_usbupgrade_state=${dir_usb_upgrade}/.usbupgrade_state
 readonly file_usbupgrade_force=${dir_usb_upgrade}/.usbupgrade_force
 readonly file_usbupgrade_auto=${dir_usb_upgrade}/.usbupgrade_auto
+readonly file_usbupgrade_noap=${dir_usb_upgrade}/.usbupgrade_noap
 
 usbupgrade_echo_logger() {
 	echo "usbupgrade" "$@"
@@ -60,6 +61,7 @@ usbupgrade_ok() {
 			state="on"
 		fi
 		sysled sata ${state}
+		echo "usbupgrade_ok!"
 	done
 }
 
@@ -79,6 +81,7 @@ usbupgrade_fail() {
 
 		sysled sys ${state}
 		sysled sata ${state}
+		echo "usbupgrade_fail!"
 	done
 }
 
@@ -110,6 +113,31 @@ usbupgrade_rootfs() {
 	local err=0
 	local tag
 
+        case "${idx}" in
+        "0")
+                dev=${dev_rootfs0}
+                dir=${dir_rootfs0}
+                ;;
+        "1")
+                dev=${dev_rootfs1}
+                dir=${dir_rootfs1}
+                ;;
+        "2")
+                dev=${dev_rootfs2}
+                dir=${dir_rootfs2}
+                ;;
+        *)
+                echo "invadue system number"
+                return
+                ;;
+        esac
+
+	if [[ ${idx} -eq 1 || ${idx} -eq 2 ]]; then
+	        do_umount ${dev}
+	        mkfs.ext4 ${dev}; err=$?
+		do_mount ${dev} ${dir} 1 "yes" "-w"
+	fi
+	
 	rsync_copy ${src} ${dst}; err=$?
 
 	local tag
@@ -210,11 +238,13 @@ usbupgrade_phase2() {
 		return ${err}
 	fi
 
-	${__ROOTFS__}/etc/upgrade/upgrade_ap.sh 'usbupgrade'; err=$?
-	if ((0!=err)); then
-		return ${err}
+	if [[ ! -f "${file_usbupgrade_noap}" ]]; then
+		${__ROOTFS__}/etc/upgrade/upgrade_ap.sh 'usbupgrade'; err=$?
+		if ((0!=err)); then
+			return ${err}
+		fi
 	fi
-
+	
 	usbupgrade_state "ok"
 	bootm rootfs=${buddy};
 }
@@ -299,6 +329,10 @@ usbupgrade() {
 
 		if ((0!=err)); then
 			usbupgrade_fail
+		fi
+		if [[ -f "${file_usbupgrade_noap}" ]]; then
+			#usbupgrade_echo_logger "${info} ok, will reboot..."
+			${__ROOTFS__}/usr/sbin/sysreboot
 		fi
 
 		return ${e_usbupgrade}

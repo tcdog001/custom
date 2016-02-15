@@ -4,9 +4,10 @@
 website_config_file=""
 
 #__zj_rsync__=no means "not use zj_rsync_server and zj_rsync_user"
-zj_rsync_server=zjweb.autelan.com
-zj_rsync_config_server=zjconfig.autelan.com
+zj_rsync_server=lms1.autelan.com
+zj_rsync_config_server=lms1.autelan.com
 zj_rsync_user=autelan
+zj_rsync_part=systemver
 
 #
 # $1: remote path, $2: dir, $3: server, $4: user
@@ -24,7 +25,7 @@ rsync_action() {
 	local rsync_dynamic=" --timeout=${timeout}"
 	local rsync_static="-acz --delete --force --stats --partial"
 	local pass="--password-file=/etc/rsyncd.pass"
-	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::systemver/${remote} ${dir} ${pass}"
+	local action="rsync ${rsync_dynamic} ${rsync_static} ${user}@${server}::${zj_rsync_part}/${remote} ${dir} ${pass}"
 
 	local err=0
 	eval "${action}"; err=$?
@@ -81,7 +82,7 @@ website_local_version() {
 	if [[ -f ${file} ]]; then
 		cat ${file}
 	else
-		echo zj1.2
+		echo ""
 	fi
 }
 

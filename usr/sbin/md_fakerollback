@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. ${__ROOTFS__}/etc/upgrade/dir.in
+
+main() {                                     
+        local version="$1"
+
+        version_check ${version} || {
+		echo "bad version:${version}"
+		return 1
+	}
+	${__ROOTFS__}/usr/sbin/fakerollback ${version} 0 
+}
+
+main "$@"
